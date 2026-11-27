@@ -4,8 +4,9 @@ import { FileText, Paperclip, X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 
-import { api, keys, useBootstrap, type Message } from './api';
+import { api, keys, useBootstrap, type Member, type Message } from './api';
 import { removeMessage, upsertMessage } from './cache';
+import { toDisplayText, toStoredText } from './mentions';
 import { useRealtime } from './Realtime';
 import { toast } from './ui/toast';
 import { formatBytes, useUploads } from './useUploads';
@@ -34,20 +35,23 @@ export default function Composer({
   const files = useUploads();
   const canSend = (text.trim().length > 0 || files.attachments.length > 0) && !files.busy;
 
-  const mentionQuery = /@([a-zA-Z0-9_]*)$/.exec(text.slice(0, cursor))?.[1];
+  const mentionQuery = /(?:^|\s)@([^\s@]*)$/.exec(text.slice(0, cursor))?.[1];
   const suggestions =
     mentionQuery === undefined
       ? []
       : (data?.users ?? [])
           .filter(
             (u) =>
-              u.username.toLowerCase().startsWith(mentionQuery.toLowerCase()) ||
-              u.display_name.includes(mentionQuery),
+              u.id !== data?.me.id && u.display_name.toLowerCase().includes(mentionQuery.toLowerCase()),
           )
           .slice(0, MENTION_SUGGEST_LIMIT);
 
-  const insertMention = (username: string) => {
-    const before = text.slice(0, cursor).replace(/@([a-zA-Z0-9_]*)$/, `@${username} `);
+  // 자동완성으로 고른 이름 → 사용자 id (동명이인 구분용)
+  const picked = useRef(new Map<string, string>());
+
+  const insertMention = (user: Member) => {
+    picked.current.set(user.display_name, user.id);
+    const before = text.slice(0, cursor).replace(/@([^\s@]*)$/, `@${user.display_name} `);
     const next = before + text.slice(cursor);
     setText(next);
     setCursor(before.length);
@@ -58,8 +62,9 @@ export default function Composer({
   };
 
   const send = async () => {
-    const body = text.trim();
     if (!canSend || !data) return;
+    const body = toStoredText(text.trim(), data.users, picked.current);
+    picked.current = new Map();
     const attachments = files.attachments;
     // 보내는 즉시 화면에 표시하고 (전송 중 표시), 서버 응답이 오면 진짜 메시지로 교체
     const temp: Message = {
@@ -71,7 +76,6 @@ export default function Composer({
       created_at: Date.now(),
       edited_at: null,
       deleted_at: null,
-      username: data.me.username,
       display_name: data.me.display_name,
       reply_count: 0,
       last_reply_at: null,
@@ -97,7 +101,7 @@ export default function Composer({
       upsertMessage(qc, created, temp.id);
     } catch (e) {
       removeMessage(qc, temp);
-      setText((current) => current || body);
+      setText((current) => current || toDisplayText(body, data.users));
       toast.error((e as Error).message);
     }
   };
@@ -145,12 +149,11 @@ export default function Composer({
               <button
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  insertMention(u.username);
+                  insertMention(u);
                 }}
                 className="flex w-full gap-2 px-3 py-2 text-left text-xsmall14 hover:bg-primary-10 hover:text-primary"
               >
                 <span className="font-semibold">{u.display_name}</span>
-                <span className="opacity-60">@{u.username}</span>
               </button>
             </li>
           ))}
@@ -207,7 +210,7 @@ export default function Composer({
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault();
-              if (suggestions.length > 0) insertMention(suggestions[0].username);
+              if (suggestions.length > 0) insertMention(suggestions[0]);
               else send();
             }
           }}

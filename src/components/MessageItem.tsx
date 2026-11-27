@@ -4,10 +4,11 @@ import { MessageSquareText, Pencil, SmilePlus, Trash2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { api, keys, type Message } from './api';
+import { api, keys, type Member, type Message } from './api';
 import Attachments from './Attachments';
 import { applyReaction, updateMessageEverywhere } from './cache';
 import { Avatar, formatTime, MessageBody } from './format';
+import { toDisplayText, toStoredText } from './mentions';
 import Button from './ui/Button';
 import { confirm } from './ui/confirm';
 import { toast } from './ui/toast';
@@ -18,20 +19,20 @@ export default function MessageItem({
   message: m,
   compact,
   meId,
-  myUsername,
+  users,
   isAdmin,
   onOpenThread,
 }: {
   message: Message;
   compact: boolean;
   meId: string;
-  myUsername: string;
+  users: Member[];
   isAdmin: boolean;
   onOpenThread?: () => void;
 }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(m.body);
+  const [draft, setDraft] = useState('');
   const [picker, setPicker] = useState(false);
   const isMine = m.user_id === meId;
   const deleted = Boolean(m.deleted_at);
@@ -58,8 +59,9 @@ export default function MessageItem({
   };
 
   const save = async () => {
-    if (!draft.trim() || draft === m.body) return setEditing(false);
-    await api(`/api/messages/${m.id}`, { method: 'PATCH', body: { body: draft } }).catch((e) => toast.error(e.message));
+    const next = toStoredText(draft, users);
+    if (!draft.trim() || next === m.body) return setEditing(false);
+    await api(`/api/messages/${m.id}`, { method: 'PATCH', body: { body: next } }).catch((e) => toast.error(e.message));
     setEditing(false);
     refresh();
   };
@@ -117,7 +119,7 @@ export default function MessageItem({
           </div>
         ) : (
           <div className="text-[15px] leading-relaxed break-words whitespace-pre-wrap text-neutral-10">
-            <MessageBody text={m.body} myUsername={myUsername} />
+            <MessageBody text={m.body} meId={meId} users={users} />
             {m.edited_at && <span className="ml-1 text-xs text-neutral-50">(편집됨)</span>}
           </div>
         )}
@@ -156,7 +158,7 @@ export default function MessageItem({
         <div className="absolute -top-4 right-5 hidden items-center rounded-sm border border-neutral-80 bg-white p-0.5 shadow-03 group-hover:flex">
           <ToolButton label="리액션" onClick={() => setPicker((v) => !v)}><SmilePlus className="size-4" /></ToolButton>
           {onOpenThread && <ToolButton label="스레드에 답글" onClick={onOpenThread}><MessageSquareText className="size-4" /></ToolButton>}
-          {isMine && <ToolButton label="수정" onClick={() => { setDraft(m.body); setEditing(true); }}><Pencil className="size-4" /></ToolButton>}
+          {isMine && <ToolButton label="수정" onClick={() => { setDraft(toDisplayText(m.body, users)); setEditing(true); }}><Pencil className="size-4" /></ToolButton>}
           {(isMine || isAdmin) && <ToolButton label="삭제" onClick={remove}><Trash2 className="size-4" /></ToolButton>}
         </div>
       )}

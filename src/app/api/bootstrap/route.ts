@@ -6,8 +6,8 @@ export const GET = route(async () => {
   const user = await requireUser();
   const [channels, users] = await Promise.all([
     sidebar(user),
-    all<{ id: string; username: string; display_name: string }>(
-      'SELECT id, username, display_name FROM users ORDER BY display_name',
+    all<{ id: string; display_name: string }>(
+      'SELECT id, display_name FROM users ORDER BY display_name',
     ),
   ]);
   return {

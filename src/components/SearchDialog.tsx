@@ -5,13 +5,15 @@ import { Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { api, type SearchResult } from './api';
+import { api, useBootstrap, type SearchResult } from './api';
+import { toDisplayText } from './mentions';
 import { formatDay, formatTime } from './format';
 import { useUi } from './Workspace';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
 export default function SearchDialog({ onClose }: { onClose: () => void }) {
+  const { data: boot } = useBootstrap();
   const [q, setQ] = useState('');
   const [debounced, setDebounced] = useState('');
   const router = useRouter();
@@ -66,7 +68,7 @@ export default function SearchDialog({ onClose }: { onClose: () => void }) {
                     {formatDay(r.created_at)} {formatTime(r.created_at)}
                   </span>
                 </div>
-                <p className="mt-1 line-clamp-2 text-xsmall14 text-neutral-10">{r.body}</p>
+                <p className="mt-1 line-clamp-2 text-xsmall14 text-neutral-10">{toDisplayText(r.body, boot?.users ?? [])}</p>
               </button>
             </li>
           ))}

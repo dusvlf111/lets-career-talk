@@ -14,7 +14,7 @@ export type SidebarChannel = {
   dm_user_id: string | null;
   dm_name: string | null;
 };
-export type Member = { id: string; username: string; display_name: string };
+export type Member = { id: string; display_name: string };
 export type Bootstrap = {
   me: Me;
   channels: SidebarChannel[];
@@ -38,7 +38,6 @@ export type Message = {
   created_at: number;
   edited_at: number | null;
   deleted_at: number | null;
-  username: string;
   display_name: string;
   reply_count: number;
   last_reply_at: number | null;

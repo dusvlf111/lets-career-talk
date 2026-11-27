@@ -1,14 +1,22 @@
 import { Fragment } from 'react';
 
-const TOKEN_RE = /(https?:\/\/[^\s<]+)|(@[a-zA-Z0-9_]{3,20})|(`[^`\n]+`)|(\*\*[^*\n]+\*\*)/g;
+import type { Member } from './api';
+
+const TOKEN_RE = /(https?:\/\/[^\s<]+)|(<@[\w-]+>)|(`[^`\n]+`)|(\*\*[^*\n]+\*\*)/g;
+
+type MentionCtx = { meId: string; byId: Map<string, Member> };
 
 /** 링크, @멘션, `코드`, **굵게** 정도만 지원하는 가벼운 포맷터 */
-export function MessageBody({ text, myUsername }: { text: string; myUsername: string }) {
+export function MessageBody({ text, meId, users }: { text: string; meId: string; users: Member[] }) {
+  const ctx: MentionCtx = {
+    meId,
+    byId: new Map(users.map((u) => [u.id, u])),
+  };
   return (
     <>
       {text.split('\n').map((line, i, lines) => (
         <Fragment key={i}>
-          {formatLine(line, myUsername)}
+          {formatLine(line, ctx)}
           {i < lines.length - 1 && <br />}
         </Fragment>
       ))}
@@ -16,7 +24,7 @@ export function MessageBody({ text, myUsername }: { text: string; myUsername: st
   );
 }
 
-function formatLine(line: string, me: string) {
+function formatLine(line: string, ctx: MentionCtx) {
   const out: React.ReactNode[] = [];
   let last = 0;
   for (const m of line.matchAll(TOKEN_RE)) {
@@ -30,12 +38,18 @@ function formatLine(line: string, me: string) {
         </a>,
       );
     } else if (mention) {
-      const isMe = mention.slice(1).toLowerCase() === me.toLowerCase();
-      out.push(
-        <span key={idx} className={`rounded px-0.5 ${isMe ? 'bg-point text-neutral-0' : 'bg-primary-10 text-primary'}`}>
-          {mention}
-        </span>,
-      );
+      // <@id> → @이름 (아이디는 화면에 노출하지 않는다)
+      const user = ctx.byId.get(mention.slice(2, -1));
+      if (!user) {
+        out.push('@알 수 없음');
+      } else {
+        const isMe = user.id === ctx.meId;
+        out.push(
+          <span key={idx} className={`rounded-xxs px-0.5 font-medium ${isMe ? 'bg-point text-neutral-0' : 'bg-primary-10 text-primary'}`}>
+            @{user.display_name}
+          </span>,
+        );
+      }
     } else if (code) {
       out.push(
         <code key={idx} className="rounded border border-neutral-80 bg-neutral-90 px-1 text-[13px] text-requirement">

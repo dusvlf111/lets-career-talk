@@ -63,7 +63,7 @@ export default function MessageList({
               message={m}
               compact={compact}
               meId={data.me.id}
-              myUsername={data.me.username}
+              users={data.users}
               isAdmin={data.me.is_admin}
               onOpenThread={onOpenThread ? () => onOpenThread(m.id) : undefined}
             />

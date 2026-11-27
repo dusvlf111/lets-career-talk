@@ -27,7 +27,6 @@ export type MessageRow = {
   created_at: number;
   edited_at: number | null;
   deleted_at: number | null;
-  username: string;
   display_name: string;
   reply_count: number;
   last_reply_at: number | null;
@@ -99,7 +98,7 @@ export async function joinChannel(userId: string, channelId: string) {
 
 const MESSAGE_SELECT = `
   SELECT m.id, m.channel_id, m.user_id, m.parent_id, m.body, m.created_at,
-         m.edited_at, m.deleted_at, u.username, u.display_name,
+         m.edited_at, m.deleted_at, u.display_name,
          (SELECT COUNT(*) FROM messages r WHERE r.parent_id = m.id AND r.deleted_at IS NULL) AS reply_count,
          (SELECT MAX(created_at) FROM messages r WHERE r.parent_id = m.id AND r.deleted_at IS NULL) AS last_reply_at
   FROM messages m JOIN users u ON u.id = m.user_id`;
@@ -246,7 +245,6 @@ export async function createMessage(
     created_at: now,
     edited_at: null,
     deleted_at: null,
-    username: user.username,
     display_name: user.display_name,
     reply_count: 0,
     last_reply_at: null,
@@ -309,7 +307,7 @@ export async function sidebar(user: User) {
      LEFT JOIN users other ON other.id = om.user_id
      WHERE c.type = 'public' OR cm.user_id IS NOT NULL
      ORDER BY c.created_at ASC`,
-    [user.id, user.id, `%@${user.username}%`, user.id, user.id],
+    [user.id, user.id, `%<@${user.id}>%`, user.id, user.id],
   );
   return channels.map((c) => ({
     ...c,
