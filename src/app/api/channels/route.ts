@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-import { HttpError, requireUser, route } from '@/lib/auth';
+import { HttpError, isAdmin, requireUser, route } from '@/lib/auth';
+import { getSettings } from '@/lib/settings';
 import { joinChannel, newId } from '@/lib/chat';
 import { one, run } from '@/lib/db';
 import { publish } from '@/lib/realtime';
@@ -12,6 +13,9 @@ const schema = z.object({
 
 export const POST = route(async (req: Request) => {
   const user = await requireUser();
+  if (!isAdmin(user) && !(await getSettings()).member_can_create_channel) {
+    throw new HttpError(403, '채널은 운영진만 만들 수 있어요.');
+  }
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, '채널 이름은 1~30자로 입력해주세요.');
   const name = parsed.data.name.replace(/^#/, '').replace(/\s+/g, '-');

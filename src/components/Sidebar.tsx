@@ -11,11 +11,12 @@ import {
   MessagesSquare,
   Plus,
   Search,
+  Settings,
   UserRound,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { logout } from '@/app/(auth)/actions';
 
@@ -30,7 +31,6 @@ import Modal from './ui/Modal';
 import { toast } from './ui/toast';
 import { useUi } from './Workspace';
 
-const COHORT = process.env.NEXT_PUBLIC_COHORT_NAME ?? '렛츠커리어';
 
 type Tab = 'home' | 'dms' | 'activity' | 'me';
 
@@ -58,7 +58,21 @@ export default function Sidebar() {
   const [createOpen, setCreateOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('home');
   const [activityOpen, setActivityOpen] = useState(false);
+
+  // ⌘K / Ctrl+K: 검색 열기 (슬랙과 같은 단축키)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchOpen((open) => !open);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   if (!data) return null;
+  const canCreateChannel = data.me.is_admin || data.settings.member_can_create_channel;
 
   const joined = data.channels.filter((c) => c.type === 'public' && c.joined);
   const notJoined = data.channels.filter((c) => c.type === 'public' && !c.joined);
@@ -121,7 +135,7 @@ export default function Sidebar() {
   ));
 
   const channelSection = (
-    <Section title="채널" onAdd={() => setCreateOpen(true)} addLabel="채널 만들기">
+    <Section title="채널" onAdd={canCreateChannel ? () => setCreateOpen(true) : undefined} addLabel="채널 만들기">
       {joined.map((c) => (
         <ChannelLink key={c.id} c={c} active={params.id === c.id} icon={<Hash className="size-4" />} />
       ))}
@@ -162,7 +176,7 @@ export default function Sidebar() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo-simple.svg" alt="" className="size-8 md:size-7" />
             <div className="min-w-0">
-              <div className="truncate text-small18 font-bold text-neutral-0 md:text-xsmall16">{COHORT}</div>
+              <div className="truncate text-small18 font-bold text-neutral-0 md:text-xsmall16">{data.settings.workspace_name}</div>
               <div className="text-xxsmall12 text-neutral-40">참여자 전용 톡방</div>
             </div>
           </div>
@@ -171,7 +185,10 @@ export default function Sidebar() {
             className="mx-3 mb-3 flex w-[calc(100%-1.5rem)] items-center gap-2 rounded-md bg-neutral-95 px-3 py-2.5 text-xsmall14 text-neutral-45 md:mb-0 md:bg-white md:py-2 md:ring-1 md:ring-neutral-80 md:hover:ring-neutral-70"
           >
             <Search className="size-4" />
-            메시지 검색
+            <span className="flex-1 text-left">메시지 검색</span>
+            <kbd className="hidden rounded-xxs border border-neutral-80 px-1.5 font-sans text-[11px] text-neutral-45 md:block">
+              {isMac() ? '⌘K' : 'Ctrl K'}
+            </kbd>
           </button>
           {/* 데스크톱: 활동(나를 멘션한 메시지) */}
           <button
@@ -229,7 +246,15 @@ export default function Sidebar() {
                 {live ? '실시간 연결됨' : '자동 새로고침 중'}
               </div>
             </div>
-            <form action={logout} className="mt-4">
+            <Link
+              href="/settings"
+              className="mt-4 flex w-full items-center gap-3 rounded-md px-3 py-3.5 text-xsmall16 text-neutral-10 hover:bg-neutral-95"
+            >
+              <Settings className="size-5 text-neutral-40" />
+              <span className="flex-1">{data.me.is_admin ? '설정 · 멤버 관리' : '프로필 설정'}</span>
+              <ChevronRight className="size-5 text-neutral-60" />
+            </Link>
+            <form action={logout}>
               <button className="flex w-full items-center gap-3 rounded-md px-3 py-3.5 text-xsmall16 text-neutral-10 hover:bg-neutral-95">
                 <LogOut className="size-5 text-neutral-40" />
                 로그아웃
@@ -240,11 +265,21 @@ export default function Sidebar() {
 
         {/* 데스크톱: 하단 내 정보 */}
         <div className="hidden items-center gap-2 border-t border-neutral-80 px-4 py-3 md:flex">
-          <PresenceAvatar name={data.me.display_name} id={data.me.id} on={live} size={28} />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-xsmall14 font-semibold text-neutral-0">{data.me.display_name}</div>
-            <div className="text-xxsmall12 text-neutral-45">{live ? '실시간 연결됨' : '자동 새로고침 중'}</div>
-          </div>
+          <Link href="/settings" className="-m-1 flex min-w-0 flex-1 items-center gap-2 rounded-xs p-1 hover:bg-neutral-90" title="설정">
+            <PresenceAvatar name={data.me.display_name} id={data.me.id} on={live} size={28} />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-xsmall14 font-semibold text-neutral-0">{data.me.display_name}</div>
+              <div className="text-xxsmall12 text-neutral-45">{live ? '실시간 연결됨' : '자동 새로고침 중'}</div>
+            </div>
+          </Link>
+          <Link
+            href="/settings"
+            title="설정"
+            aria-label="설정"
+            className="flex size-8 items-center justify-center rounded-xs text-neutral-40 hover:bg-neutral-90 hover:text-neutral-0"
+          >
+            <Settings className="size-4" />
+          </Link>
           <form action={logout}>
             <button
               title="로그아웃"
@@ -328,6 +363,10 @@ function ActivityList({ onOpen }: { onOpen: (r: SearchResult) => void }) {
       ))}
     </ul>
   );
+}
+
+function isMac() {
+  return typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 }
 
 function Empty({ children }: { children: React.ReactNode }) {

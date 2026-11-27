@@ -2,10 +2,11 @@ import 'server-only';
 
 import { after } from 'next/server';
 
-import { HttpError, type User } from './auth';
+import { HttpError, isAdmin, type User } from './auth';
 import { all, db, one, run } from './db';
 import { memo } from './memo';
 import { publish } from './realtime';
+import { getSettings } from './settings';
 
 export const MESSAGE_PAGE_SIZE = 50;
 /** 공지 채널: 새 글은 관리자만, 스레드 답글은 누구나 */
@@ -205,7 +206,12 @@ export async function createMessage(
   if (text.length > MAX_MESSAGE_LENGTH) {
     throw new HttpError(400, `메시지는 ${MAX_MESSAGE_LENGTH}자까지 입력할 수 있어요.`);
   }
-  if (channel.id === ANNOUNCEMENT_CHANNEL_ID && !parentId && Number(user.is_admin) !== 1) {
+  if (
+    channel.id === ANNOUNCEMENT_CHANNEL_ID &&
+    !parentId &&
+    !isAdmin(user) &&
+    (await getSettings()).announcement_admin_only
+  ) {
     throw new HttpError(403, '공지 채널에는 운영진만 글을 쓸 수 있어요. 스레드로 답글을 남겨주세요.');
   }
   if (parentId) {

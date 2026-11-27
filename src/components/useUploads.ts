@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 
+import { isAllowedType, type UploadTypeGroup } from '@/lib/uploadTypes';
+
 import { toast } from './ui/toast';
 
-const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
+const BYTES_PER_MB = 1024 * 1024;
 const MAX_FILES = 10;
 
 export type PendingUpload = {
@@ -19,7 +21,9 @@ export type PendingUpload = {
 };
 
 /** 파일을 고르는 즉시 Vercel Blob으로 직접 업로드하고 결과 URL을 모아둔다 */
-export function useUploads() {
+type UploadPolicy = { enabled: boolean; maxMb: number; types: UploadTypeGroup[] };
+
+export function useUploads(policy: UploadPolicy) {
   const [uploads, setUploads] = useState<PendingUpload[]>([]);
 
   const patch = (key: string, next: Partial<PendingUpload>) =>
@@ -35,7 +39,8 @@ export function useUploads() {
       accepted.map(async (file) => {
         const key = crypto.randomUUID();
         const contentType = file.type || 'application/octet-stream';
-        const tooBig = file.size > MAX_FILE_SIZE_BYTES;
+        const tooBig = file.size > policy.maxMb * BYTES_PER_MB;
+        const badType = !isAllowedType(contentType, policy.types);
         setUploads((list) => [
           ...list,
           {
@@ -46,10 +51,16 @@ export function useUploads() {
             progress: 0,
             previewUrl: contentType.startsWith('image/') ? URL.createObjectURL(file) : null,
             url: null,
-            error: tooBig ? '20MB 이하만 올릴 수 있어요' : null,
+            error: !policy.enabled
+              ? '파일 업로드가 꺼져 있어요'
+              : tooBig
+                ? `${policy.maxMb}MB 이하만 올릴 수 있어요`
+                : badType
+                  ? '허용되지 않은 형식이에요'
+                  : null,
           },
         ]);
-        if (tooBig) return;
+        if (!policy.enabled || tooBig || badType) return;
         try {
           const blob = await upload(`uploads/${file.name}`, file, {
             access: 'public',

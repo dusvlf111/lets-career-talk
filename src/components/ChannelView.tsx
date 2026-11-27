@@ -156,7 +156,7 @@ export default function ChannelView({ channelId }: { channelId: string }) {
           <div className="flex-1" />
         )}
         <TypingIndicator channelId={channelId} />
-        {channelId === ANNOUNCEMENT_CHANNEL_ID && !boot?.me.is_admin ? (
+        {channelId === ANNOUNCEMENT_CHANNEL_ID && !boot?.me.is_admin && boot?.settings.announcement_admin_only ? (
           <p className="mx-5 mb-4 rounded-md bg-neutral-95 px-4 py-3 text-xsmall14 text-neutral-40">
             공지 채널에는 운영진만 글을 쓸 수 있어요. 공지 메시지의 스레드에서 답글을 남길 수 있어요.
           </p>

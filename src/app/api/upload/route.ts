@@ -2,30 +2,10 @@ import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { NextResponse } from 'next/server';
 
 import { currentUser } from '@/lib/auth';
+import { getSettings } from '@/lib/settings';
+import { contentTypesFor } from '@/lib/uploadTypes';
 
-const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
-
-const ALLOWED_CONTENT_TYPES = [
-  'image/*',
-  'video/mp4',
-  'video/quicktime',
-  'application/pdf',
-  'text/plain',
-  'text/csv',
-  'application/zip',
-  'application/x-zip-compressed',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'application/x-hwp',
-  'application/haansofthwp',
-  'application/vnd.hancom.hwp',
-  'application/vnd.hancom.hwpx',
-  'application/octet-stream',
-];
+const BYTES_PER_MB = 1024 * 1024;
 
 /** 브라우저가 Blob에 직접 올릴 수 있도록 단기 토큰을 발급한다 (4.5MB 함수 제한 우회) */
 export async function POST(req: Request) {
@@ -35,11 +15,13 @@ export async function POST(req: Request) {
       body,
       request: req,
       onBeforeGenerateToken: async () => {
-        const user = await currentUser();
+        const [user, settings] = await Promise.all([currentUser(), getSettings()]);
         if (!user) throw new Error('로그인이 필요합니다.');
+        // 워크스페이스 설정의 업로드 허용 여부·용량·형식을 그대로 적용
+        if (!settings.upload_enabled) throw new Error('파일 업로드가 꺼져 있어요.');
         return {
-          allowedContentTypes: ALLOWED_CONTENT_TYPES,
-          maximumSizeInBytes: MAX_FILE_SIZE_BYTES,
+          allowedContentTypes: contentTypesFor(settings.upload_types),
+          maximumSizeInBytes: settings.upload_max_mb * BYTES_PER_MB,
           addRandomSuffix: true,
           tokenPayload: JSON.stringify({ uid: user.id }),
         };

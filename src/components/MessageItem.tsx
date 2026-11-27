@@ -25,6 +25,7 @@ export default function MessageItem({
   meId,
   users,
   isAdmin,
+  canDeleteOwn,
   onOpenThread,
 }: {
   message: Message;
@@ -32,6 +33,7 @@ export default function MessageItem({
   meId: string;
   users: Member[];
   isAdmin: boolean;
+  canDeleteOwn: boolean;
   onOpenThread?: () => void;
 }) {
   const qc = useQueryClient();
@@ -48,6 +50,7 @@ export default function MessageItem({
   const isMine = m.user_id === meId;
   const deleted = Boolean(m.deleted_at);
   const pending = Boolean(m.pending);
+  const canDelete = (isMine && canDeleteOwn) || isAdmin;
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: keys.messages(m.channel_id) });
@@ -204,7 +207,7 @@ export default function MessageItem({
           <ToolButton label="리액션" onClick={() => setPicker((v) => !v)}><SmilePlus className="size-4" /></ToolButton>
           {onOpenThread && <ToolButton label="스레드에 답글" onClick={onOpenThread}><MessageSquareText className="size-4" /></ToolButton>}
           {isMine && <ToolButton label="수정" onClick={startEdit}><Pencil className="size-4" /></ToolButton>}
-          {(isMine || isAdmin) && <ToolButton label="삭제" onClick={remove}><Trash2 className="size-4" /></ToolButton>}
+          {canDelete && <ToolButton label="삭제" onClick={remove}><Trash2 className="size-4" /></ToolButton>}
         </div>
       )}
       <BottomSheet open={sheet} onOpenChange={setSheet} title="메시지 메뉴">
@@ -234,7 +237,7 @@ export default function MessageItem({
             })}
           />
           {isMine && <SheetAction icon={<Pencil className="size-5" />} label="메시지 수정" onClick={sheetDo(startEdit)} />}
-          {(isMine || isAdmin) && (
+          {canDelete && (
             <SheetAction icon={<Trash2 className="size-5" />} label="메시지 삭제" onClick={sheetDo(remove)} danger />
           )}
         </div>

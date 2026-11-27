@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { DEFAULT_CHANNEL_IDS, one, run } from '@/lib/db';
 import { joinChannel, newId } from '@/lib/chat';
 import { SESSION_COOKIE, SESSION_MAX_AGE_SEC, signSession } from '@/lib/session';
+import { effectiveInviteCode } from '@/lib/settings';
 
 export type AuthState = { error?: string; ok?: boolean } | undefined;
 
@@ -49,7 +50,7 @@ export async function signup(_: AuthState, formData: FormData): Promise<AuthStat
   if (!parsed.success) return { error: firstError(parsed.error) };
   const { username, displayName, password, inviteCode } = parsed.data;
 
-  const expected = process.env.INVITE_CODE;
+  const expected = await effectiveInviteCode();
   if (!expected) return { error: '입장 암호가 아직 설정되지 않았어요. 운영진에게 문의해주세요.' };
   if (inviteCode !== expected) return { error: '입장 암호가 올바르지 않아요.' };
 
@@ -60,9 +61,9 @@ export async function signup(_: AuthState, formData: FormData): Promise<AuthStat
   const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
   const isFirstUser = !(await one('SELECT 1 FROM users LIMIT 1'));
   await run(
-    `INSERT INTO users (id, username, display_name, password_hash, is_admin, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [id, username, displayName, hash, isFirstUser ? 1 : 0, Date.now()],
+    `INSERT INTO users (id, username, display_name, password_hash, is_admin, role, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, username, displayName, hash, isFirstUser ? 1 : 0, isFirstUser ? 'owner' : 'member', Date.now()],
   );
   await Promise.all(DEFAULT_CHANNEL_IDS.map((cid) => joinChannel(id, cid)));
   await startSession(id);
@@ -74,12 +75,13 @@ export async function login(_: AuthState, formData: FormData): Promise<AuthState
   if (!parsed.success) return { error: firstError(parsed.error) };
   const { username, password } = parsed.data;
 
-  const user = await one<{ id: string; password_hash: string }>(
-    'SELECT id, password_hash FROM users WHERE username = ?',
+  const user = await one<{ id: string; password_hash: string; deactivated_at: number | null }>(
+    'SELECT id, password_hash, deactivated_at FROM users WHERE username = ?',
     [username],
   );
   const ok = user ? await bcrypt.compare(password, user.password_hash) : false;
   if (!user || !ok) return { error: '아이디 또는 비밀번호가 올바르지 않아요.' };
+  if (user.deactivated_at) return { error: '비활성화된 계정이에요. 운영진에게 문의해주세요.' };
 
   await startSession(user.id);
   return { ok: true };

@@ -53,6 +53,10 @@ const SCHEMA = [
     created_at INTEGER NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS attachments_message ON attachments(message_id)`,
+  `CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS reactions (
     message_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
@@ -78,8 +82,26 @@ function getClient() {
   return client;
 }
 
+/** 나중에 추가된 컬럼. 이미 있으면 실패하므로 하나씩 시도한다 */
+const ADDED_COLUMNS = [
+  `ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'member'`,
+  `ALTER TABLE users ADD COLUMN deactivated_at INTEGER`,
+];
+
+const MIGRATIONS = [
+  // 예전 관리자(is_admin=1) → admin, 그중 가장 먼저 가입한 사람 → owner
+  `UPDATE users SET role = 'admin' WHERE is_admin = 1 AND role = 'member'`,
+  `UPDATE users SET role = 'owner'
+     WHERE id = (SELECT id FROM users WHERE role IN ('owner', 'admin') ORDER BY created_at LIMIT 1)
+       AND NOT EXISTS (SELECT 1 FROM users WHERE role = 'owner')`,
+];
+
 async function init(db: Client) {
   await db.batch(SCHEMA, 'write');
+  for (const sql of ADDED_COLUMNS) {
+    await db.execute(sql).catch(() => {});
+  }
+  await db.batch(MIGRATIONS, 'write');
   const now = Date.now();
   await db.batch(
     DEFAULT_CHANNELS.map((c) => ({

@@ -68,6 +68,7 @@ export default function MessageList({
               meId={data.me.id}
               users={data.users}
               isAdmin={data.me.is_admin}
+              canDeleteOwn={data.me.is_admin || data.settings.member_can_delete_message}
               onOpenThread={onOpenThread ? () => onOpenThread(m.id) : undefined}
             />
           </Fragment>

@@ -5,7 +5,6 @@ import { useActionState, useEffect } from 'react';
 
 import { login, signup, type AuthState } from './actions';
 
-const COHORT = process.env.NEXT_PUBLIC_COHORT_NAME ?? '렛츠커리어';
 
 type Field = { name: string; label: string; type?: string; placeholder?: string };
 
@@ -21,7 +20,7 @@ const LOGIN_FIELDS: Field[] = [
   { name: 'password', label: '비밀번호', type: 'password' },
 ];
 
-export default function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
+export default function AuthForm({ mode, workspaceName }: { mode: 'login' | 'signup'; workspaceName: string }) {
   const isSignup = mode === 'signup';
   const [state, action, pending] = useActionState<AuthState, FormData>(
     isSignup ? signup : login,
@@ -43,7 +42,7 @@ export default function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
         <div className="mb-8 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.svg" alt="렛츠커리어" className="mx-auto mb-5 h-8" />
-          <h1 className="text-small20 font-bold text-neutral-0">{COHORT} 톡방</h1>
+          <h1 className="text-small20 font-bold text-neutral-0">{workspaceName} 톡방</h1>
           <p className="mt-1 text-xsmall14 text-neutral-40">
             {isSignup ? '운영진에게 받은 입장 암호로 가입해요' : '다시 오신 걸 환영해요'}
           </p>

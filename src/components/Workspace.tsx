@@ -38,10 +38,10 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
     0,
   );
   useEffect(() => {
-    const base = document.title.replace(/^\(\d+\+?\)\s*/, '');
+    const base = data ? `${data.settings.workspace_name} 톡방` : document.title.replace(/^\(\d+\+?\)\s*/, '');
     document.title = alertCount > 0 ? `(${alertCount}) ${base}` : base;
     // 페이지 이동 시 Next가 제목을 되돌리므로 경로가 바뀔 때도 다시 적용
-  }, [alertCount, pathname]);
+  }, [alertCount, pathname, data]);
 
   if (error) {
     return (

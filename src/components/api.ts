@@ -2,7 +2,28 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-export type Me = { id: string; username: string; display_name: string; is_admin: boolean };
+import type { UploadTypeGroup } from '@/lib/uploadTypes';
+
+export type Role = 'owner' | 'admin' | 'member';
+export type Me = { id: string; username: string; display_name: string; role: Role; is_admin: boolean };
+export type PublicSettings = {
+  workspace_name: string;
+  member_can_create_channel: boolean;
+  announcement_admin_only: boolean;
+  member_can_delete_message: boolean;
+  upload_enabled: boolean;
+  upload_max_mb: number;
+  upload_types: UploadTypeGroup[];
+};
+export type AdminSettings = PublicSettings & { invite_code: string; invite_code_from_env: boolean };
+export type AdminMember = {
+  id: string;
+  username: string;
+  display_name: string;
+  role: Role;
+  created_at: number;
+  deactivated_at: number | null;
+};
 export type SidebarChannel = {
   id: string;
   name: string | null;
@@ -17,6 +38,7 @@ export type SidebarChannel = {
 export type Member = { id: string; display_name: string };
 export type Bootstrap = {
   me: Me;
+  settings: PublicSettings;
   channels: SidebarChannel[];
   users: Member[];
   realtime: boolean;

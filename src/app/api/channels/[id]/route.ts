@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { HttpError, requireUser, route } from '@/lib/auth';
+import { HttpError, isAdmin, requireUser, route } from '@/lib/auth';
 import { assertCanRead, forgetChannel } from '@/lib/chat';
 import { run } from '@/lib/db';
 import { publish } from '@/lib/realtime';
@@ -24,7 +24,7 @@ export const PATCH = route(async (req: Request, { params }: Ctx) => {
 export const DELETE = route(async (_req: Request, { params }: Ctx) => {
   const user = await requireUser();
   const { id } = await params;
-  if (Number(user.is_admin) !== 1) throw new HttpError(403, '관리자만 채널을 삭제할 수 있어요.');
+  if (!isAdmin(user)) throw new HttpError(403, '관리자만 채널을 삭제할 수 있어요.');
   const channel = await assertCanRead(user, id);
   if (channel.type !== 'public' || id === 'general') {
     throw new HttpError(400, '이 채널은 삭제할 수 없어요.');

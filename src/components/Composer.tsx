@@ -33,7 +33,12 @@ export default function Composer({
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const files = useUploads();
+  const uploadEnabled = data?.settings.upload_enabled ?? false;
+  const files = useUploads({
+    enabled: uploadEnabled,
+    maxMb: data?.settings.upload_max_mb ?? 0,
+    types: data?.settings.upload_types ?? [],
+  });
   const canSend = (text.trim().length > 0 || files.attachments.length > 0) && !files.busy;
 
   const mentionQuery = /(?:^|\s)@([^\s@]*)$/.exec(text.slice(0, cursor))?.[1];
@@ -144,7 +149,7 @@ export default function Composer({
       }}
       onDragLeave={() => setDragging(false)}
       onDrop={(e) => {
-        if (e.dataTransfer.files.length === 0) return;
+        if (e.dataTransfer.files.length === 0 || !uploadEnabled) return;
         e.preventDefault();
         setDragging(false);
         files.add([...e.dataTransfer.files]);
@@ -229,7 +234,7 @@ export default function Composer({
           onSelect={(e) => setCursor(e.currentTarget.selectionStart)}
           onPaste={(e) => {
             const pasted = [...e.clipboardData.files];
-            if (pasted.length === 0) return;
+            if (pasted.length === 0 || !uploadEnabled) return;
             e.preventDefault();
             files.add(pasted);
           }}
@@ -273,13 +278,14 @@ export default function Composer({
         <div className="flex items-center justify-between gap-2 px-2 pb-2 text-xxsmall12 text-neutral-50">
           <button
             onClick={() => fileInput.current?.click()}
+            hidden={!uploadEnabled}
             title="파일 첨부"
             aria-label="파일 첨부"
             className="flex size-8 shrink-0 items-center justify-center rounded-xs text-neutral-40 hover:bg-neutral-95 hover:text-primary"
           >
             <Paperclip className="size-4" />
           </button>
-          <span className="hidden flex-1 truncate sm:block">Enter 전송 · Shift+Enter 줄바꿈 · @멘션 · 파일 끌어다 놓기</span>
+          <span className="hidden flex-1 truncate sm:block">Enter 전송 · Shift+Enter 줄바꿈 · @멘션{uploadEnabled ? ' · 파일 끌어다 놓기' : ''}</span>
           <span className="flex-1 sm:hidden" />
           <button
             onClick={send}
