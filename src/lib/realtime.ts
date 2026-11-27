@@ -1,15 +1,15 @@
 import 'server-only';
 
-import * as Ably from 'ably';
+import { createHttpClient, type PubSubHttpClient } from '@ably/pubsub-server';
 
 import { all } from './db';
 
-let rest: Ably.Rest | null = null;
+let rest: PubSubHttpClient | null = null;
 
 export function ablyRest() {
   const key = process.env.ABLY_API_KEY;
   if (!key) return null;
-  rest ??= new Ably.Rest({ key });
+  rest ??= createHttpClient({ key });
   return rest;
 }
 

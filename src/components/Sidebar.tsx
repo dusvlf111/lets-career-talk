@@ -75,9 +75,9 @@ export default function Sidebar() {
         <div className="border-b border-white/10 px-4 py-3">
           <div className="truncate font-bold text-white">{COHORT}</div>
           <div className="flex items-center gap-1.5 text-xs">
-            <span className={`size-2 rounded-full ${connected || !data.realtime ? 'bg-green-400' : 'bg-yellow-400'}`} />
+            <span className={`size-2 rounded-full ${connected ? 'bg-green-400' : 'bg-yellow-400'}`} />
             {data.me.display_name}
-            {!data.realtime && <span className="opacity-60">(폴링 모드)</span>}
+            {(!data.realtime || !connected) && <span className="opacity-60">(폴링 모드)</span>}
           </div>
         </div>
 

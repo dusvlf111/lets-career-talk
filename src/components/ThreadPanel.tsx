@@ -3,6 +3,7 @@
 import { useBootstrap, useThread } from './api';
 import Composer from './Composer';
 import MessageList from './MessageList';
+import { useRealtime } from './Realtime';
 
 export default function ThreadPanel({
   channelId,
@@ -14,7 +15,8 @@ export default function ThreadPanel({
   onClose: () => void;
 }) {
   const { data: boot } = useBootstrap();
-  const { data } = useThread(parentId, boot?.realtime);
+  const { connected } = useRealtime();
+  const { data } = useThread(parentId, boot && boot.realtime && connected);
 
   return (
     <aside className="flex w-full min-w-0 flex-col border-l lg:w-[400px] lg:shrink-0">

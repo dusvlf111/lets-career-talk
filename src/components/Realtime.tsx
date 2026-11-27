@@ -1,7 +1,7 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import type * as Ably from 'ably';
+import type { Message as AblyMessage, PubSubClient } from '@ably/pubsub-device';
 import {
   createContext,
   useCallback,
@@ -46,7 +46,7 @@ export default function RealtimeProvider({
   children: React.ReactNode;
 }) {
   const qc = useQueryClient();
-  const [client, setClient] = useState<Ably.Realtime | null>(null);
+  const [client, setClient] = useState<PubSubClient | null>(null);
   const [online, setOnline] = useState<Set<string>>(new Set());
   const [connected, setConnected] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,14 +58,10 @@ export default function RealtimeProvider({
   useEffect(() => {
     if (!enabled || !meId) return;
     let closed = false;
-    let rt: Ably.Realtime | null = null;
-    import('ably/modular').then(({ BaseRealtime, WebSocketTransport, FetchRequest, RealtimePresence }) => {
+    let rt: PubSubClient | null = null;
+    import('@ably/pubsub-device').then(({ createClient }) => {
       if (closed) return;
-      rt = new BaseRealtime({
-        authUrl: '/api/ably/token',
-        clientId: meId,
-        plugins: { WebSocketTransport, FetchRequest, RealtimePresence },
-      }) as unknown as Ably.Realtime;
+      rt = createClient({ authUrl: '/api/ably/token', clientId: meId });
       rt.connection.on((s) => setConnected(s.current === 'connected'));
       setClient(rt);
     });
@@ -77,7 +73,7 @@ export default function RealtimeProvider({
   }, [enabled, meId]);
 
   // 이벤트 처리: 해당 쿼리만 다시 불러온다
-  const handler = useRef<(msg: Ably.Message) => void>(() => {});
+  const handler = useRef<(msg: AblyMessage) => void>(() => {});
   handler.current = (msg) => {
     const event = msg.data as RealtimeEvent;
     if (event.type === 'message') {
@@ -105,7 +101,7 @@ export default function RealtimeProvider({
       `user:${meId}`,
       ...joinedIds.split(',').filter(Boolean).map((id) => `pub:${id}`),
     ];
-    const listener = (m: Ably.Message) => handler.current(m);
+    const listener = (m: AblyMessage) => handler.current(m);
     const channels = names.map((n) => client.channels.get(n));
     channels.forEach((ch) => ch.subscribe('event', listener));
     return () => channels.forEach((ch) => ch.unsubscribe('event', listener));
@@ -138,7 +134,7 @@ export default function RealtimeProvider({
     (channelId: string, listener: TypingListener) => {
       if (!client) return () => {};
       const ch = client.channels.get(`typing:${channelId}`);
-      const l = (m: Ably.Message) => {
+      const l = (m: AblyMessage) => {
         if (m.clientId && m.clientId !== meId) listener(m.clientId, (m.data as { name: string }).name);
       };
       ch.subscribe('typing', l);

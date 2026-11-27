@@ -9,13 +9,16 @@ import Composer from './Composer';
 import MessageList from './MessageList';
 import ThreadPanel from './ThreadPanel';
 import TypingIndicator from './TypingIndicator';
+import { useRealtime } from './Realtime';
 import { useUi } from './Workspace';
 
 const ANNOUNCEMENT_CHANNEL_ID = 'general';
 
 export default function ChannelView({ channelId }: { channelId: string }) {
   const { data: boot } = useBootstrap();
-  const { data: messages, error } = useMessages(channelId, boot?.realtime);
+  const { connected } = useRealtime();
+  // 실시간 연결이 끊겨 있으면 폴링으로 대체
+  const { data: messages, error } = useMessages(channelId, boot && boot.realtime && connected);
   const { threadId, openThread, setSidebarOpen } = useUi();
   const qc = useQueryClient();
   const router = useRouter();
