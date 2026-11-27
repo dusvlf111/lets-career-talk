@@ -1,5 +1,6 @@
 'use client';
 
+import { X } from 'lucide-react';
 import { useBootstrap, useThread } from './api';
 import Composer from './Composer';
 import MessageList from './MessageList';
@@ -22,8 +23,8 @@ export default function ThreadPanel({
     <aside className="flex w-full min-w-0 flex-col border-l lg:w-[400px] lg:shrink-0">
       <header className="flex items-center justify-between border-b px-4 py-3">
         <h2 className="font-bold">스레드</h2>
-        <button onClick={onClose} className="rounded px-2 text-xl hover:bg-neutral-100" aria-label="닫기">
-          ×
+        <button onClick={onClose} className="rounded px-2 text-xl hover:bg-neutral-90" aria-label="닫기">
+          <X className="size-5" />
         </button>
       </header>
       {data ? (
@@ -33,7 +34,7 @@ export default function ThreadPanel({
             <div className="border-b pb-2">
               <MessageList messages={[data.parent]} />
               {data.replies.length > 0 && (
-                <p className="px-5 pt-1 text-xs text-neutral-500">답글 {data.replies.length}개</p>
+                <p className="px-5 pt-1 text-xs text-neutral-40">답글 {data.replies.length}개</p>
               )}
             </div>
           }

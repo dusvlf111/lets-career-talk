@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: '렛츠커리어 참여자 전용 톡방',
 };
 
-export const viewport: Viewport = { themeColor: '#3f0e40' };
+export const viewport: Viewport = { themeColor: '#4138a3' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
       </head>
-      <body>
+      <body className="font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

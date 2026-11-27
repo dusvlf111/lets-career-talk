@@ -1,22 +1,83 @@
 @import 'tailwindcss';
 
-html,
-body {
-  height: 100%;
-}
+/* 렛츠커리어 디자인 토큰 (lets-intern-client packages/config/tailwind/preset.js) */
+@theme {
+  --color-neutral-*: initial;
+  --color-neutral-0: #27272d;
+  --color-neutral-10: #2a2d34;
+  --color-neutral-20: #3e4148;
+  --color-neutral-30: #4c4f56;
+  --color-neutral-35: #5c5f66;
+  --color-neutral-40: #7a7d84;
+  --color-neutral-45: #989ba2;
+  --color-neutral-50: #acafb6;
+  --color-neutral-60: #bdbdbd;
+  --color-neutral-70: #cfcfcf;
+  --color-neutral-75: #d8d8d8;
+  --color-neutral-80: #e7e7e7;
+  --color-neutral-85: #efefef;
+  --color-neutral-90: #f3f3f3;
+  --color-neutral-95: #f9f9f8;
+  --color-neutral-100: #fafafa;
 
-body {
-  font-family:
+  --color-primary: #4d55f5;
+  --color-primary-hover: #474ee8;
+  --color-primary-dark: #4138a3;
+  --color-primary-light: #757bff;
+  --color-primary-xlight: #a9c1ff;
+  --color-primary-5: #f5f6ff;
+  --color-primary-10: #edeefe;
+  --color-primary-15: #e3e5fb;
+  --color-primary-20: #dbddfd;
+  --color-primary-30: #caccfc;
+  --color-primary-40: #b8bbfb;
+  --color-primary-80: #7177f7;
+  --color-primary-90: #5f66f6;
+
+  --color-secondary: #1bc47d;
+  --color-secondary-10: #e8f9f2;
+  --color-point: #daff7c;
+  --color-requirement: #fc5555;
+  --color-system-positive-blue: #5177ff;
+  --color-system-error: #f64e39;
+
+  --radius-xxs: 0.25rem;
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.5rem;
+  --radius-ms: 0.625rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+
+  --shadow-02:
+    0px 1px 2px 0px rgba(0, 0, 0, 0.12), 0px 0px 1px 0px rgba(0, 0, 0, 0.08),
+    0px 0px 1px 0px rgba(0, 0, 0, 0.08);
+  --shadow-03:
+    0px 2px 8px 0px rgba(0, 0, 0, 0.12), 0px 1px 4px 0px rgba(0, 0, 0, 0.08),
+    0px 0px 1px 0px rgba(0, 0, 0, 0.08);
+  --shadow-05:
+    0px 16px 20px 0px rgba(0, 0, 0, 0.12), 0px 8px 16px 0px rgba(0, 0, 0, 0.08),
+    0px 0px 8px 0px rgba(0, 0, 0, 0.08);
+
+  --font-sans:
     'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
     system-ui, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-  color: #1d1c1d;
-  background: #fff;
 }
 
 @layer base {
   *,
   ::after,
   ::before {
-    border-color: #e5e5e5;
+    border-color: var(--color-neutral-80);
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    color: var(--color-neutral-0);
+    background: #fff;
+    letter-spacing: -0.01em;
   }
 }

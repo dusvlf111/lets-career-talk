@@ -28,7 +28,7 @@ export default function TypingIndicator({ channelId }: { channelId: string }) {
 
   const names = Object.values(typers).map((t) => t.name);
   return (
-    <div className="h-5 px-5 text-xs text-neutral-500">
+    <div className="h-5 px-5 text-xs text-neutral-40">
       {names.length > 0 && `${names.slice(0, 3).join(', ')}님이 입력 중…`}
     </div>
   );

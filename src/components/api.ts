@@ -22,6 +22,13 @@ export type Bootstrap = {
   realtime: boolean;
 };
 export type Reaction = { emoji: string; count: number; mine: boolean };
+export type Attachment = {
+  id: string;
+  url: string;
+  name: string;
+  content_type: string;
+  size: number;
+};
 export type Message = {
   id: string;
   channel_id: string;
@@ -36,6 +43,7 @@ export type Message = {
   reply_count: number;
   last_reply_at: number | null;
   reactions: Reaction[];
+  attachments: Attachment[];
 };
 export type SearchResult = {
   id: string;

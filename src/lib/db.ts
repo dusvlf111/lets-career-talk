@@ -43,6 +43,16 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS messages_channel
     ON messages(channel_id, parent_id, created_at)`,
   `CREATE INDEX IF NOT EXISTS messages_parent ON messages(parent_id, created_at)`,
+  `CREATE TABLE IF NOT EXISTS attachments (
+    id TEXT PRIMARY KEY,
+    message_id TEXT NOT NULL,
+    url TEXT NOT NULL,
+    name TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    created_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS attachments_message ON attachments(message_id)`,
   `CREATE TABLE IF NOT EXISTS reactions (
     message_id TEXT NOT NULL,
     user_id TEXT NOT NULL,

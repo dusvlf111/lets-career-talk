@@ -35,14 +35,16 @@ export default function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
   }, [state]);
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-[#3f0e40] p-4">
+    <main className="flex min-h-dvh items-center justify-center bg-[linear-gradient(165deg,#667FFF_10.2%,#4D55F5_80.95%)] p-4">
       <form
         action={action}
-        className="w-full max-w-sm space-y-4 rounded-xl bg-white p-6 shadow-xl"
+        className="w-full max-w-sm space-y-4 rounded-lg bg-white p-6 shadow-05"
       >
         <div className="space-y-1 text-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="렛츠커리어" className="mx-auto mb-3 h-8" />
           <h1 className="text-xl font-bold">{COHORT} 톡방</h1>
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-neutral-40">
             {isSignup ? '입장 암호로 가입하고 함께 이야기해요' : '다시 오신 걸 환영해요'}
           </p>
         </div>
@@ -55,24 +57,24 @@ export default function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
               placeholder={f.placeholder}
               required
               autoComplete={f.type === 'password' ? (isSignup ? 'new-password' : 'current-password') : 'username'}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 outline-none focus:border-[#611f69] focus:ring-2 focus:ring-[#611f69]/20"
+              className="w-full rounded-md border border-neutral-70 px-3 py-2 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
           </label>
         ))}
         {state?.error && (
-          <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+          <p role="alert" className="rounded-md bg-requirement/10 px-3 py-2 text-sm text-system-error">
             {state.error}
           </p>
         )}
         <button
           disabled={pending}
-          className="w-full rounded-md bg-[#611f69] py-2.5 font-semibold text-white hover:bg-[#4a154b] disabled:opacity-60"
+          className="w-full rounded-md bg-primary py-2.5 font-semibold text-white hover:bg-primary-hover disabled:opacity-60"
         >
           {pending || state?.ok ? '처리 중…' : isSignup ? '가입하기' : '로그인'}
         </button>
-        <p className="text-center text-sm text-neutral-500">
+        <p className="text-center text-sm text-neutral-40">
           {isSignup ? '이미 계정이 있나요? ' : '처음이신가요? '}
-          <Link href={isSignup ? '/login' : '/signup'} className="font-medium text-[#611f69] underline">
+          <Link href={isSignup ? '/login' : '/signup'} className="font-medium text-primary underline">
             {isSignup ? '로그인' : '회원가입'}
           </Link>
         </p>

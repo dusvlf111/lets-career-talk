@@ -29,6 +29,7 @@ export const DELETE = route(async (_req: Request, { params }: Ctx) => {
     throw new HttpError(400, '이 채널은 삭제할 수 없어요.');
   }
   await run('DELETE FROM reactions WHERE message_id IN (SELECT id FROM messages WHERE channel_id = ?)', [id]);
+  await run('DELETE FROM attachments WHERE message_id IN (SELECT id FROM messages WHERE channel_id = ?)', [id]);
   await run('DELETE FROM messages WHERE channel_id = ?', [id]);
   await run('DELETE FROM channel_members WHERE channel_id = ?', [id]);
   await run('DELETE FROM channels WHERE id = ?', [id]);

@@ -25,20 +25,20 @@ function formatLine(line: string, me: string) {
     const [token, url, mention, code, bold] = m;
     if (url) {
       out.push(
-        <a key={idx} href={url} target="_blank" rel="noreferrer noopener" className="break-all text-[#1264a3] hover:underline">
+        <a key={idx} href={url} target="_blank" rel="noreferrer noopener" className="break-all text-primary hover:underline">
           {url}
         </a>,
       );
     } else if (mention) {
       const isMe = mention.slice(1).toLowerCase() === me.toLowerCase();
       out.push(
-        <span key={idx} className={`rounded px-0.5 ${isMe ? 'bg-yellow-200 text-[#1d1c1d]' : 'bg-[#e8f5fa] text-[#1264a3]'}`}>
+        <span key={idx} className={`rounded px-0.5 ${isMe ? 'bg-point text-neutral-0' : 'bg-primary-10 text-primary'}`}>
           {mention}
         </span>,
       );
     } else if (code) {
       out.push(
-        <code key={idx} className="rounded border border-neutral-200 bg-neutral-100 px-1 text-[13px] text-[#e01e5a]">
+        <code key={idx} className="rounded border border-neutral-80 bg-neutral-90 px-1 text-[13px] text-requirement">
           {code.slice(1, -1)}
         </code>,
       );

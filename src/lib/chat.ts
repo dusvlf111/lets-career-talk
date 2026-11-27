@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { after } from 'next/server';
+
 import { HttpError, type User } from './auth';
 import { all, one, run } from './db';
 import { publish } from './realtime';
@@ -32,7 +34,29 @@ export type MessageRow = {
 };
 
 export type Reaction = { emoji: string; count: number; mine: boolean };
-export type Message = MessageRow & { reactions: Reaction[] };
+export type Attachment = {
+  id: string;
+  url: string;
+  name: string;
+  content_type: string;
+  size: number;
+};
+export type AttachmentInput = Omit<Attachment, 'id'>;
+export type Message = MessageRow & { reactions: Reaction[]; attachments: Attachment[] };
+
+export const MAX_ATTACHMENTS = 10;
+
+/** 우리 Blob 스토어에 올라간 파일인지 확인 (토큰: vercel_blob_rw_{storeId}_{secret}) */
+function isOwnBlobUrl(url: string) {
+  const storeId = process.env.BLOB_READ_WRITE_TOKEN?.split('_')[3]?.toLowerCase();
+  if (!storeId) return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && u.hostname === `${storeId}.public.blob.vercel-storage.com`;
+  } catch {
+    return false;
+  }
+}
 
 export function newId() {
   return crypto.randomUUID();
@@ -102,11 +126,23 @@ async function attachReactions(user: User, rows: MessageRow[]): Promise<Message[
     list.push({ emoji: r.emoji, count: Number(r.count), mine: Number(r.mine) === 1 });
     byMessage.set(r.message_id, list);
   }
+  const files = await all<Attachment & { message_id: string }>(
+    `SELECT id, message_id, url, name, content_type, size FROM attachments
+     WHERE message_id IN (${placeholders}) ORDER BY created_at`,
+    ids,
+  );
+  const filesByMessage = new Map<string, Attachment[]>();
+  for (const { message_id, ...f } of files) {
+    const list = filesByMessage.get(message_id) ?? [];
+    list.push({ ...f, size: Number(f.size) });
+    filesByMessage.set(message_id, list);
+  }
   return rows.map((r) => ({
     ...r,
     reply_count: Number(r.reply_count),
     body: r.deleted_at ? '' : r.body,
     reactions: byMessage.get(r.id) ?? [],
+    attachments: r.deleted_at ? [] : (filesByMessage.get(r.id) ?? []),
   }));
 }
 
@@ -143,9 +179,16 @@ export async function createMessage(
   channel: Channel,
   body: string,
   parentId: string | null,
+  attachments: AttachmentInput[] = [],
 ) {
   const text = body.trim();
-  if (!text) throw new HttpError(400, '메시지를 입력해주세요.');
+  if (!text && attachments.length === 0) throw new HttpError(400, '메시지를 입력해주세요.');
+  if (attachments.length > MAX_ATTACHMENTS) {
+    throw new HttpError(400, `파일은 한 번에 ${MAX_ATTACHMENTS}개까지 보낼 수 있어요.`);
+  }
+  if (attachments.some((a) => !isOwnBlobUrl(a.url))) {
+    throw new HttpError(400, '잘못된 첨부파일입니다.');
+  }
   if (text.length > MAX_MESSAGE_LENGTH) {
     throw new HttpError(400, `메시지는 ${MAX_MESSAGE_LENGTH}자까지 입력할 수 있어요.`);
   }
@@ -168,6 +211,13 @@ export async function createMessage(
      VALUES (?, ?, ?, ?, ?, ?)`,
     [id, channel.id, user.id, parentId, text, now],
   );
+  for (const a of attachments) {
+    await run(
+      `INSERT INTO attachments (id, message_id, url, name, content_type, size, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [newId(), id, a.url, a.name.slice(0, 200), a.content_type.slice(0, 100), a.size, now],
+    );
+  }
   await run(
     'UPDATE channel_members SET last_read_at = ? WHERE channel_id = ? AND user_id = ?',
     [now, channel.id, user.id],
@@ -176,14 +226,17 @@ export async function createMessage(
   return getMessage(user, id);
 }
 
+/** 실시간 알림은 응답을 보낸 뒤에 발행해서 사용자 대기 시간에 포함되지 않게 한다 */
 export async function notifyMessage(
   channel: Pick<Channel, 'id' | 'type'>,
   messageId: string,
   parentId: string | null,
 ) {
-  await publish(
-    { type: 'message', channelId: channel.id, messageId, parentId },
-    { kind: channel.type, channelId: channel.id },
+  after(() =>
+    publish(
+      { type: 'message', channelId: channel.id, messageId, parentId },
+      { kind: channel.type, channelId: channel.id },
+    ),
   );
 }
 

@@ -1,10 +1,26 @@
 'use client';
 
+import { MessageSquareText, Pencil, SmilePlus, Trash2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { api, keys, type Message } from './api';
+import Attachments from './Attachments';
 import { Avatar, formatTime, MessageBody } from './format';
+
+function toggleReaction(msg: Message, emoji: string): Message {
+  const existing = msg.reactions.find((r) => r.emoji === emoji);
+  if (!existing) {
+    return { ...msg, reactions: [...msg.reactions, { emoji, count: 1, mine: true }] };
+  }
+  const count = existing.count + (existing.mine ? -1 : 1);
+  return {
+    ...msg,
+    reactions: msg.reactions
+      .map((r) => (r.emoji === emoji ? { ...r, count, mine: !r.mine } : r))
+      .filter((r) => r.count > 0),
+  };
+}
 
 export const QUICK_EMOJIS = ['👍', '❤️', '😂', '🎉', '🙏', '👀', '✅', '🔥'];
 
@@ -37,8 +53,18 @@ export default function MessageItem({
 
   const react = async (emoji: string) => {
     setPicker(false);
-    await api(`/api/messages/${m.id}/reactions`, { method: 'POST', body: { emoji } }).catch((e) => alert(e.message));
-    refresh();
+    // 화면에는 바로 반영하고, 서버 요청은 뒤에서 처리 (실패하면 서버 값으로 되돌림)
+    const toggle = (msg: Message) => (msg.id === m.id ? toggleReaction(msg, emoji) : msg);
+    qc.setQueryData<Message[]>(keys.messages(m.channel_id), (old) => old?.map(toggle));
+    qc.setQueryData<{ parent: Message; replies: Message[] }>(keys.thread(m.parent_id ?? m.id), (old) =>
+      old ? { parent: toggle(old.parent), replies: old.replies.map(toggle) } : old,
+    );
+    try {
+      await api(`/api/messages/${m.id}/reactions`, { method: 'POST', body: { emoji } });
+    } catch (e) {
+      alert((e as Error).message);
+      refresh();
+    }
   };
 
   const save = async () => {
@@ -55,10 +81,10 @@ export default function MessageItem({
   };
 
   return (
-    <div className={`group relative flex gap-2 px-5 hover:bg-neutral-50 ${compact ? 'py-0.5' : 'pt-2 pb-0.5'}`}>
+    <div className={`group relative flex gap-2 px-5 hover:bg-neutral-95 ${compact ? 'py-0.5' : 'pt-2 pb-0.5'}`}>
       <div className="w-9 shrink-0">
         {compact ? (
-          <span className="invisible block pt-1 text-right text-[11px] text-neutral-400 group-hover:visible">
+          <span className="invisible block pt-1 text-right text-[11px] text-neutral-50 group-hover:visible">
             {formatTime(m.created_at)}
           </span>
         ) : (
@@ -69,12 +95,12 @@ export default function MessageItem({
         {!compact && (
           <div className="flex items-baseline gap-2">
             <span className="font-bold">{m.display_name}</span>
-            <span className="text-xs text-neutral-500">{formatTime(m.created_at)}</span>
+            <span className="text-xs text-neutral-40">{formatTime(m.created_at)}</span>
           </div>
         )}
 
         {deleted ? (
-          <p className="text-sm italic text-neutral-400">삭제된 메시지입니다.</p>
+          <p className="text-sm italic text-neutral-50">삭제된 메시지입니다.</p>
         ) : editing ? (
           <div className="space-y-1 py-1">
             <textarea
@@ -88,20 +114,21 @@ export default function MessageItem({
                 }
                 if (e.key === 'Escape') setEditing(false);
               }}
-              className="w-full rounded-md border border-neutral-300 p-2 text-[15px] outline-none focus:border-[#1264a3]"
+              className="w-full rounded-md border border-neutral-70 p-2 text-[15px] outline-none focus:border-primary"
               rows={2}
             />
             <div className="flex gap-2 text-sm">
               <button onClick={() => setEditing(false)} className="rounded border px-3 py-1">취소</button>
-              <button onClick={save} className="rounded bg-[#007a5a] px-3 py-1 text-white">저장</button>
+              <button onClick={save} className="rounded bg-primary px-3 py-1 text-white">저장</button>
             </div>
           </div>
         ) : (
           <div className="break-words text-[15px] leading-relaxed whitespace-pre-wrap">
             <MessageBody text={m.body} myUsername={myUsername} />
-            {m.edited_at && <span className="ml-1 text-xs text-neutral-400">(편집됨)</span>}
+            {m.edited_at && <span className="ml-1 text-xs text-neutral-50">(편집됨)</span>}
           </div>
         )}
+        {!deleted && <Attachments files={m.attachments} />}
 
         {m.reactions.length > 0 && (
           <div className="mt-1 flex flex-wrap gap-1">
@@ -110,7 +137,7 @@ export default function MessageItem({
                 key={r.emoji}
                 onClick={() => react(r.emoji)}
                 className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${
-                  r.mine ? 'border-[#1264a3] bg-[#e8f5fa] text-[#1264a3]' : 'border-neutral-200 bg-neutral-50'
+                  r.mine ? 'border-primary bg-primary-10 text-primary' : 'border-neutral-80 bg-neutral-95'
                 }`}
               >
                 <span className="text-sm">{r.emoji}</span>
@@ -121,10 +148,10 @@ export default function MessageItem({
         )}
 
         {onOpenThread && m.reply_count > 0 && (
-          <button onClick={onOpenThread} className="mt-1 text-sm font-semibold text-[#1264a3] hover:underline">
+          <button onClick={onOpenThread} className="mt-1 text-sm font-semibold text-primary hover:underline">
             답글 {m.reply_count}개
             {m.last_reply_at && (
-              <span className="ml-2 font-normal text-neutral-500">마지막 답글 {formatTime(m.last_reply_at)}</span>
+              <span className="ml-2 font-normal text-neutral-40">마지막 답글 {formatTime(m.last_reply_at)}</span>
             )}
           </button>
         )}
@@ -132,16 +159,16 @@ export default function MessageItem({
 
       {!deleted && !editing && (
         <div className="absolute -top-3 right-4 hidden items-center rounded-md border bg-white shadow-sm group-hover:flex">
-          <ToolButton label="리액션" onClick={() => setPicker((v) => !v)}>😀</ToolButton>
-          {onOpenThread && <ToolButton label="스레드에 답글" onClick={onOpenThread}>💬</ToolButton>}
-          {isMine && <ToolButton label="수정" onClick={() => { setDraft(m.body); setEditing(true); }}>✏️</ToolButton>}
-          {(isMine || isAdmin) && <ToolButton label="삭제" onClick={remove}>🗑️</ToolButton>}
+          <ToolButton label="리액션" onClick={() => setPicker((v) => !v)}><SmilePlus className="size-4" /></ToolButton>
+          {onOpenThread && <ToolButton label="스레드에 답글" onClick={onOpenThread}><MessageSquareText className="size-4" /></ToolButton>}
+          {isMine && <ToolButton label="수정" onClick={() => { setDraft(m.body); setEditing(true); }}><Pencil className="size-4" /></ToolButton>}
+          {(isMine || isAdmin) && <ToolButton label="삭제" onClick={remove}><Trash2 className="size-4" /></ToolButton>}
         </div>
       )}
       {picker && (
         <div className="absolute top-6 right-4 z-10 flex gap-1 rounded-md border bg-white p-1 shadow-lg">
           {QUICK_EMOJIS.map((e) => (
-            <button key={e} onClick={() => react(e)} className="rounded p-1 text-lg hover:bg-neutral-100">
+            <button key={e} onClick={() => react(e)} className="rounded p-1 text-lg hover:bg-neutral-90">
               {e}
             </button>
           ))}
@@ -153,7 +180,7 @@ export default function MessageItem({
 
 function ToolButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button title={label} aria-label={label} onClick={onClick} className="px-2 py-1 text-sm hover:bg-neutral-100">
+    <button title={label} aria-label={label} onClick={onClick} className="flex size-8 items-center justify-center text-neutral-35 hover:bg-neutral-90 hover:text-neutral-0">
       {children}
     </button>
   );

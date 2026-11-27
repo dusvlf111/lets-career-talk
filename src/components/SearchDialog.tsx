@@ -47,12 +47,12 @@ export default function SearchDialog({ onClose }: { onClose: () => void }) {
           className="w-full border-b px-4 py-3 outline-none"
         />
         <ul className="max-h-[60vh] overflow-y-auto">
-          {isFetching && <li className="px-4 py-3 text-sm text-neutral-500">검색 중…</li>}
-          {data?.length === 0 && <li className="px-4 py-3 text-sm text-neutral-500">결과가 없어요.</li>}
+          {isFetching && <li className="px-4 py-3 text-sm text-neutral-40">검색 중…</li>}
+          {data?.length === 0 && <li className="px-4 py-3 text-sm text-neutral-40">결과가 없어요.</li>}
           {data?.map((r) => (
             <li key={r.id}>
-              <button onClick={() => open(r)} className="block w-full border-b px-4 py-2.5 text-left hover:bg-neutral-50">
-                <div className="flex gap-2 text-xs text-neutral-500">
+              <button onClick={() => open(r)} className="block w-full border-b px-4 py-2.5 text-left hover:bg-neutral-95">
+                <div className="flex gap-2 text-xs text-neutral-40">
                   <span className="font-semibold">{r.channel_type === 'dm' ? 'DM' : `#${r.channel_name}`}</span>
                   <span>{r.display_name}</span>
                   <span>

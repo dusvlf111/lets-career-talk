@@ -53,7 +53,7 @@ export default function MessageList({
           <Fragment key={m.id}>
             {newDay && (
               <div className="relative my-3 flex justify-center">
-                <div className="absolute inset-x-0 top-1/2 border-t border-neutral-200" />
+                <div className="absolute inset-x-0 top-1/2 border-t border-neutral-80" />
                 <span className="relative rounded-full border bg-white px-3 py-0.5 text-xs font-semibold">
                   {formatDay(m.created_at)}
                 </span>

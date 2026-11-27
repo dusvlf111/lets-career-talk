@@ -29,14 +29,14 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
 
   if (error) {
     return (
-      <div className="flex h-dvh items-center justify-center text-sm text-red-600">
+      <div className="flex h-dvh items-center justify-center text-sm text-system-error">
         {error.message}
       </div>
     );
   }
   if (!data) {
     return (
-      <div className="flex h-dvh items-center justify-center bg-[#3f0e40] text-white/70">
+      <div className="flex h-dvh items-center justify-center bg-primary-dark text-white/70">
         불러오는 중…
       </div>
     );

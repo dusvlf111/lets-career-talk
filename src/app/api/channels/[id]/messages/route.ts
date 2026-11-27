@@ -13,9 +13,17 @@ export const GET = route(async (req: Request, { params }: Ctx) => {
   return listMessages(user, id, before ? Number(before) : undefined);
 });
 
+const attachmentSchema = z.object({
+  url: z.string().url(),
+  name: z.string().min(1),
+  content_type: z.string(),
+  size: z.number().int().nonnegative(),
+});
+
 const schema = z.object({
-  body: z.string(),
+  body: z.string().default(''),
   parentId: z.string().nullable().default(null),
+  attachments: z.array(attachmentSchema).default([]),
 });
 
 export const POST = route(async (req: Request, { params }: Ctx) => {
@@ -24,5 +32,6 @@ export const POST = route(async (req: Request, { params }: Ctx) => {
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, '잘못된 요청입니다.');
   const channel = await assertCanWrite(user, id);
-  return createMessage(user, channel, parsed.data.body, parsed.data.parentId);
+  const { body, parentId, attachments } = parsed.data;
+  return createMessage(user, channel, body, parentId, attachments);
 });
