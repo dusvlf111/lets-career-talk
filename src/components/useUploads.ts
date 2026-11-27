@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { toast } from './ui/toast';
+
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 const MAX_FILES = 10;
 
@@ -25,7 +27,7 @@ export function useUploads() {
 
   const add = async (files: File[]) => {
     const room = MAX_FILES - uploads.length;
-    if (files.length > room) alert(`파일은 한 번에 ${MAX_FILES}개까지 보낼 수 있어요.`);
+    if (files.length > room) toast.error(`파일은 한 번에 ${MAX_FILES}개까지 보낼 수 있어요.`);
     const accepted = files.slice(0, Math.max(0, room));
 
     const { upload } = await import('@vercel/blob/client');

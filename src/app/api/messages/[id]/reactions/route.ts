@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { HttpError, requireUser, route } from '@/lib/auth';
-import { notifyMessage } from '@/lib/chat';
+import { notifyReaction } from '@/lib/chat';
 import { one, run } from '@/lib/db';
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -29,11 +29,15 @@ export const POST = route(async (req: Request, { params }: Ctx) => {
     'DELETE FROM reactions WHERE message_id = ? AND user_id = ? AND emoji = ?',
     [id, user.id, emoji],
   );
-  if (removed.rowsAffected === 0) {
+  const added = removed.rowsAffected === 0;
+  if (added) {
     await run(
       'INSERT INTO reactions (message_id, user_id, emoji, created_at) VALUES (?, ?, ?, ?)',
       [id, user.id, emoji, Date.now()],
     );
   }
-  await notifyMessage({ id: msg.channel_id, type: msg.type }, id, msg.parent_id);
+  notifyReaction(
+    { id: msg.channel_id, type: msg.type },
+    { messageId: id, parentId: msg.parent_id, emoji, userId: user.id, added },
+  );
 });

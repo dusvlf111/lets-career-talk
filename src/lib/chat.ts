@@ -3,7 +3,7 @@ import 'server-only';
 import { after } from 'next/server';
 
 import { HttpError, type User } from './auth';
-import { all, one, run } from './db';
+import { all, db, one, run } from './db';
 import { publish } from './realtime';
 
 export const MESSAGE_PAGE_SIZE = 50;
@@ -206,24 +206,69 @@ export async function createMessage(
   }
   const id = newId();
   const now = Date.now();
-  await run(
-    `INSERT INTO messages (id, channel_id, user_id, parent_id, body, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [id, channel.id, user.id, parentId, text, now],
+  const files: Attachment[] = attachments.map((a) => ({
+    id: newId(),
+    url: a.url,
+    name: a.name.slice(0, 200),
+    content_type: a.content_type.slice(0, 100),
+    size: a.size,
+  }));
+  // 쓰기는 한 번의 왕복(batch)으로 처리
+  await (await db()).batch(
+    [
+      {
+        sql: `INSERT INTO messages (id, channel_id, user_id, parent_id, body, created_at)
+              VALUES (?, ?, ?, ?, ?, ?)`,
+        args: [id, channel.id, user.id, parentId, text, now],
+      },
+      ...files.map((f) => ({
+        sql: `INSERT INTO attachments (id, message_id, url, name, content_type, size, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        args: [f.id, id, f.url, f.name, f.content_type, f.size, now],
+      })),
+      // 공개 채널에 처음 글을 쓰면 자동 참여, 내 글은 읽음 처리
+      {
+        sql: `INSERT INTO channel_members (channel_id, user_id, last_read_at, joined_at)
+              VALUES (?, ?, ?, ?)
+              ON CONFLICT (channel_id, user_id) DO UPDATE SET last_read_at = excluded.last_read_at`,
+        args: [channel.id, user.id, now, now],
+      },
+    ],
+    'write',
   );
-  for (const a of attachments) {
-    await run(
-      `INSERT INTO attachments (id, message_id, url, name, content_type, size, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [newId(), id, a.url, a.name.slice(0, 200), a.content_type.slice(0, 100), a.size, now],
-    );
-  }
-  await run(
-    'UPDATE channel_members SET last_read_at = ? WHERE channel_id = ? AND user_id = ?',
-    [now, channel.id, user.id],
+  // 방금 쓴 값으로 바로 메시지를 만든다 (다시 조회하지 않음)
+  const message: Message = {
+    id,
+    channel_id: channel.id,
+    user_id: user.id,
+    parent_id: parentId,
+    body: text,
+    created_at: now,
+    edited_at: null,
+    deleted_at: null,
+    username: user.username,
+    display_name: user.display_name,
+    reply_count: 0,
+    last_reply_at: null,
+    reactions: [],
+    attachments: files,
+  };
+  after(() =>
+    publish(
+      { type: 'message.created', channelId: channel.id, message },
+      { kind: channel.type, channelId: channel.id },
+    ),
   );
-  await notifyMessage(channel, id, parentId);
-  return getMessage(user, id);
+  return message;
+}
+
+export function notifyReaction(
+  channel: Pick<Channel, 'id' | 'type'>,
+  event: { messageId: string; parentId: string | null; emoji: string; userId: string; added: boolean },
+) {
+  after(() =>
+    publish({ type: 'reaction', channelId: channel.id, ...event }, { kind: channel.type, channelId: channel.id }),
+  );
 }
 
 /** 실시간 알림은 응답을 보낸 뒤에 발행해서 사용자 대기 시간에 포함되지 않게 한다 */

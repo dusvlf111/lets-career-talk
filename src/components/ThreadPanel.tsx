@@ -20,10 +20,10 @@ export default function ThreadPanel({
   const { data } = useThread(parentId, boot && boot.realtime && connected);
 
   return (
-    <aside className="flex w-full min-w-0 flex-col border-l lg:w-[400px] lg:shrink-0">
-      <header className="flex items-center justify-between border-b px-4 py-3">
-        <h2 className="font-bold">스레드</h2>
-        <button onClick={onClose} className="rounded px-2 text-xl hover:bg-neutral-90" aria-label="닫기">
+    <aside className="flex w-full min-w-0 flex-col border-l border-neutral-80 lg:w-[400px] lg:shrink-0">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-80 px-4">
+        <h2 className="text-xsmall16 font-bold text-neutral-0">스레드</h2>
+        <button onClick={onClose} className="flex size-9 items-center justify-center rounded-xs text-neutral-40 hover:bg-neutral-95 hover:text-neutral-0" aria-label="닫기">
           <X className="size-5" />
         </button>
       </header>
@@ -31,10 +31,10 @@ export default function ThreadPanel({
         <MessageList
           messages={data.replies}
           header={
-            <div className="border-b pb-2">
+            <div className="border-b border-neutral-80 pb-3">
               <MessageList messages={[data.parent]} />
               {data.replies.length > 0 && (
-                <p className="px-5 pt-1 text-xs text-neutral-40">답글 {data.replies.length}개</p>
+                <p className="px-5 pt-2 text-xxsmall12 font-semibold text-neutral-40">답글 {data.replies.length}개</p>
               )}
             </div>
           }

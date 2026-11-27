@@ -36,7 +36,7 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
   }
   if (!data) {
     return (
-      <div className="flex h-dvh items-center justify-center bg-primary-dark text-white/70">
+      <div className="flex h-dvh items-center justify-center bg-white text-neutral-40">
         불러오는 중…
       </div>
     );

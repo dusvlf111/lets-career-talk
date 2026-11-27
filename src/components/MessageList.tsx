@@ -54,7 +54,7 @@ export default function MessageList({
             {newDay && (
               <div className="relative my-3 flex justify-center">
                 <div className="absolute inset-x-0 top-1/2 border-t border-neutral-80" />
-                <span className="relative rounded-full border bg-white px-3 py-0.5 text-xs font-semibold">
+                <span className="relative rounded-full border border-neutral-80 bg-white px-3 py-1 text-xxsmall12 font-semibold text-neutral-30">
                   {formatDay(m.created_at)}
                 </span>
               </div>

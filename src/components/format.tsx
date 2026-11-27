@@ -65,13 +65,13 @@ export function isSameDay(a: number, b: number) {
   return new Date(a).toDateString() === new Date(b).toDateString();
 }
 
-const AVATAR_COLORS = ['#e01e5a', '#36c5f0', '#2eb67d', '#ecb22e', '#611f69', '#1264a3', '#e8912d'];
+const AVATAR_COLORS = ['#4D55F5', '#757BFF', '#1BC47D', '#00A8EB', '#CB81F2', '#FC5555', '#4138A3'];
 
 export function Avatar({ name, id, size = 36 }: { name: string; id: string; size?: number }) {
   const hash = [...id].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-md font-bold text-white"
+      className="flex shrink-0 items-center justify-center rounded-full font-semibold text-white"
       style={{ width: size, height: size, background: AVATAR_COLORS[hash % AVATAR_COLORS.length], fontSize: size * 0.42 }}
     >
       {name.slice(0, 1)}

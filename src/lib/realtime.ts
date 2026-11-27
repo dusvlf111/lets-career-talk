@@ -13,7 +13,22 @@ export function ablyRest() {
   return rest;
 }
 
+/**
+ * - message.created: 메시지 전체를 실어 보내 받는 쪽이 다시 조회하지 않게 한다
+ * - reaction: 변경분만 보낸다 (mine 여부는 받는 쪽에서 계산)
+ * - message: 수정/삭제 등은 해당 목록만 다시 조회
+ */
 export type RealtimeEvent =
+  | { type: 'message.created'; channelId: string; message: unknown }
+  | {
+      type: 'reaction';
+      channelId: string;
+      messageId: string;
+      parentId: string | null;
+      emoji: string;
+      userId: string;
+      added: boolean;
+    }
   | { type: 'message'; channelId: string; messageId: string; parentId: string | null }
   | { type: 'channels' };
 

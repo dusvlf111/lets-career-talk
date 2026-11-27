@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { HttpError, requireUser, route } from '@/lib/auth';
-import { assertCanRead, assertCanWrite, createMessage, listMessages } from '@/lib/chat';
+import { assertCanRead, createMessage, listMessages } from '@/lib/chat';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -31,7 +31,7 @@ export const POST = route(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, '잘못된 요청입니다.');
-  const channel = await assertCanWrite(user, id);
+  const channel = await assertCanRead(user, id);
   const { body, parentId, attachments } = parsed.data;
   return createMessage(user, channel, body, parentId, attachments);
 });

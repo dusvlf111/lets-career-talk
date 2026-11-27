@@ -12,9 +12,20 @@ import {
   useState,
 } from 'react';
 
-import { keys, type Bootstrap } from './api';
+import { keys, type Bootstrap, type Message } from './api';
+import { applyReaction, updateMessageEverywhere, upsertMessage } from './cache';
 
 type RealtimeEvent =
+  | { type: 'message.created'; channelId: string; message: Message }
+  | {
+      type: 'reaction';
+      channelId: string;
+      messageId: string;
+      parentId: string | null;
+      emoji: string;
+      userId: string;
+      added: boolean;
+    }
   | { type: 'message'; channelId: string; messageId: string; parentId: string | null }
   | { type: 'channels' };
 
@@ -76,6 +87,14 @@ export default function RealtimeProvider({
   const handler = useRef<(msg: AblyMessage) => void>(() => {});
   handler.current = (msg) => {
     const event = msg.data as RealtimeEvent;
+    // 메시지/리액션은 이벤트에 담긴 값으로 바로 화면을 갱신 (서버 재조회 없음)
+    if (event.type === 'message.created') upsertMessage(qc, event.message);
+    if (event.type === 'reaction') {
+      updateMessageEverywhere(qc, event, (m) =>
+        applyReaction(m, event.emoji, event.added, event.userId === meId),
+      );
+      return;
+    }
     if (event.type === 'message') {
       qc.invalidateQueries({ queryKey: keys.messages(event.channelId) });
       qc.invalidateQueries({ queryKey: keys.thread(event.parentId ?? event.messageId) });

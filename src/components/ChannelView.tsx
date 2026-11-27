@@ -1,16 +1,19 @@
 'use client';
 
-import { Menu } from 'lucide-react';
+import { Hash, LogOut, Menu, Pencil, Trash2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { api, channelLabel, keys, useBootstrap, useMessages } from './api';
 import Composer from './Composer';
 import MessageList from './MessageList';
 import ThreadPanel from './ThreadPanel';
 import TypingIndicator from './TypingIndicator';
+import EditTopicModal from './modal/EditTopicModal';
 import { useRealtime } from './Realtime';
+import { confirm } from './ui/confirm';
+import { toast } from './ui/toast';
 import { useUi } from './Workspace';
 
 const ANNOUNCEMENT_CHANNEL_ID = 'general';
@@ -24,6 +27,7 @@ export default function ChannelView({ channelId }: { channelId: string }) {
   const qc = useQueryClient();
   const router = useRouter();
   const channel = boot?.channels.find((c) => c.id === channelId);
+  const [topicOpen, setTopicOpen] = useState(false);
 
   // 채널을 열면 스레드는 닫는다
   useEffect(() => openThread(null), [channelId, openThread]);
@@ -39,68 +43,102 @@ export default function ChannelView({ channelId }: { channelId: string }) {
   }, [channelId, lastId, isMember, qc]);
 
   if (error) {
-    return <div className="flex flex-1 items-center justify-center text-sm text-neutral-40">{error.message}</div>;
+    return <div className="flex flex-1 items-center justify-center text-xsmall14 text-neutral-40">{error.message}</div>;
   }
 
   const title = channel ? channelLabel(channel) : '';
   const isPublic = channel?.type === 'public';
 
-  const editTopic = async () => {
-    const topic = window.prompt('채널 설명', channel?.topic ?? '');
-    if (topic === null) return;
-    await api(`/api/channels/${channelId}`, { method: 'PATCH', body: { topic } }).catch((e) => alert(e.message));
-    qc.invalidateQueries({ queryKey: keys.bootstrap });
-  };
-
   const leave = async () => {
-    if (!confirm(`#${title} 채널에서 나갈까요?`)) return;
-    await api(`/api/channels/${channelId}/leave`, { method: 'POST' }).catch((e) => alert(e.message));
-    await qc.invalidateQueries({ queryKey: keys.bootstrap });
-    router.push('/c/general');
+    const ok = await confirm({ title: `#${title} 채널에서 나갈까요?`, description: '언제든 다시 참여할 수 있어요.', confirmLabel: '나가기' });
+    if (!ok) return;
+    try {
+      await api(`/api/channels/${channelId}/leave`, { method: 'POST' });
+      await qc.invalidateQueries({ queryKey: keys.bootstrap });
+      router.push('/c/general');
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
 
   const remove = async () => {
-    if (!confirm(`#${title} 채널과 모든 메시지를 삭제할까요?`)) return;
-    await api(`/api/channels/${channelId}`, { method: 'DELETE' }).catch((e) => alert(e.message));
-    await qc.invalidateQueries({ queryKey: keys.bootstrap });
-    router.push('/c/general');
+    const ok = await confirm({
+      title: `#${title} 채널을 삭제할까요?`,
+      description: '채널의 모든 메시지와 파일이 삭제되고 되돌릴 수 없어요.',
+      confirmLabel: '삭제',
+      variant: 'destructive',
+    });
+    if (!ok) return;
+    try {
+      await api(`/api/channels/${channelId}`, { method: 'DELETE' });
+      await qc.invalidateQueries({ queryKey: keys.bootstrap });
+      router.push('/c/general');
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
 
   return (
     <>
       <section className={`min-w-0 flex-1 flex-col ${threadId ? 'hidden lg:flex' : 'flex'}`}>
-        <header className="flex items-center gap-2 border-b px-4 py-2.5">
-          <button onClick={() => setSidebarOpen(true)} className="rounded p-1 text-xl md:hidden" aria-label="메뉴">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-neutral-80 px-4 md:px-5">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="-ml-1 flex size-9 items-center justify-center rounded-xs text-neutral-30 hover:bg-neutral-95 md:hidden"
+            aria-label="메뉴"
+          >
             <Menu className="size-5" />
           </button>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate font-bold">{isPublic ? `# ${title}` : title}</h2>
+            <h2 className="flex items-center gap-1 truncate text-xsmall16 font-bold text-neutral-0">
+              {isPublic && <Hash className="size-4 shrink-0 text-neutral-40" />}
+              {title}
+            </h2>
             {isPublic && (
-              <button onClick={editTopic} className="block max-w-full truncate text-left text-xs text-neutral-40 hover:underline">
-                {channel?.topic || '채널 설명 추가'}
+              <button
+                onClick={() => setTopicOpen(true)}
+                className="group flex max-w-full items-center gap-1 truncate text-left text-xxsmall12 text-neutral-40 hover:text-primary"
+              >
+                <span className="truncate">{channel?.topic || '채널 설명 추가'}</span>
+                <Pencil className="size-3 shrink-0 opacity-0 group-hover:opacity-100" />
               </button>
             )}
           </div>
-          {isPublic && channelId !== 'general' && (
-            <div className="flex gap-1 text-xs">
-              <button onClick={leave} className="rounded border px-2 py-1 hover:bg-neutral-95">나가기</button>
+          {isPublic && channelId !== ANNOUNCEMENT_CHANNEL_ID && (
+            <div className="flex items-center gap-1">
+              <IconButton label="채널 나가기" onClick={leave}>
+                <LogOut className="size-4" />
+              </IconButton>
               {boot?.me.is_admin && (
-                <button onClick={remove} className="rounded border border-requirement/30 px-2 py-1 text-system-error hover:bg-requirement/10">
-                  삭제
-                </button>
+                <IconButton label="채널 삭제" onClick={remove} danger>
+                  <Trash2 className="size-4" />
+                </IconButton>
               )}
             </div>
           )}
         </header>
+        {isPublic && channel && (
+          <EditTopicModal
+            key={String(topicOpen)}
+            channelId={channelId}
+            channelName={title}
+            initialTopic={channel.topic}
+            open={topicOpen}
+            onOpenChange={setTopicOpen}
+          />
+        )}
 
         {messages ? (
           <MessageList
             messages={messages}
             onOpenThread={openThread}
             header={
-              <div className="px-5 pt-8 pb-4">
-                <h3 className="text-2xl font-bold">{isPublic ? `# ${title}` : `${title}님과의 대화`}</h3>
-                <p className="text-sm text-neutral-40">
+              <div className="px-5 pt-10 pb-4">
+                <div className="mb-3 flex size-12 items-center justify-center rounded-md bg-primary-10 text-primary">
+                  <Hash className="size-6" />
+                </div>
+                <h3 className="text-medium22 font-bold text-neutral-0">{isPublic ? `#${title}` : `${title}님과의 대화`}</h3>
+                <p className="mt-1 text-xsmall14 text-neutral-40">
                   {isPublic ? channel?.topic || '대화를 시작해보세요.' : '두 사람만 볼 수 있는 대화예요.'}
                 </p>
               </div>
@@ -111,7 +149,7 @@ export default function ChannelView({ channelId }: { channelId: string }) {
         )}
         <TypingIndicator channelId={channelId} />
         {channelId === ANNOUNCEMENT_CHANNEL_ID && !boot?.me.is_admin ? (
-          <p className="mx-5 mb-4 rounded-lg bg-neutral-90 px-4 py-3 text-sm text-neutral-40">
+          <p className="mx-5 mb-4 rounded-md bg-neutral-95 px-4 py-3 text-xsmall14 text-neutral-40">
             공지 채널에는 운영진만 글을 쓸 수 있어요. 공지 메시지의 스레드에서 답글을 남길 수 있어요.
           </p>
         ) : (
@@ -120,5 +158,30 @@ export default function ChannelView({ channelId }: { channelId: string }) {
       </section>
       {threadId && <ThreadPanel channelId={channelId} parentId={threadId} onClose={() => openThread(null)} />}
     </>
+  );
+}
+
+function IconButton({
+  label,
+  onClick,
+  danger,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+      className={`flex size-9 items-center justify-center rounded-xs text-neutral-40 hover:bg-neutral-95 ${
+        danger ? 'hover:text-system-error' : 'hover:text-neutral-0'
+      }`}
+    >
+      {children}
+    </button>
   );
 }

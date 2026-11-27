@@ -41,6 +41,21 @@
   --color-system-positive-blue: #5177ff;
   --color-system-error: #f64e39;
 
+  --text-medium24: 1.5rem;
+  --text-medium24--line-height: 2rem;
+  --text-medium22: 1.375rem;
+  --text-medium22--line-height: 1.875rem;
+  --text-small20: 1.25rem;
+  --text-small20--line-height: 1.75rem;
+  --text-small18: 1.125rem;
+  --text-small18--line-height: 1.625rem;
+  --text-xsmall16: 1rem;
+  --text-xsmall16--line-height: 1.5rem;
+  --text-xsmall14: 0.875rem;
+  --text-xsmall14--line-height: 1.25rem;
+  --text-xxsmall12: 0.75rem;
+  --text-xxsmall12--line-height: 1rem;
+
   --radius-xxs: 0.25rem;
   --radius-xs: 0.375rem;
   --radius-sm: 0.5rem;
@@ -54,9 +69,15 @@
   --shadow-03:
     0px 2px 8px 0px rgba(0, 0, 0, 0.12), 0px 1px 4px 0px rgba(0, 0, 0, 0.08),
     0px 0px 1px 0px rgba(0, 0, 0, 0.08);
+  --shadow-04:
+    0px 6px 12px 0px rgba(0, 0, 0, 0.12), 0px 4px 8px 0px rgba(0, 0, 0, 0.08),
+    0px 0px 4px 0px rgba(0, 0, 0, 0.08);
   --shadow-05:
     0px 16px 20px 0px rgba(0, 0, 0, 0.12), 0px 8px 16px 0px rgba(0, 0, 0, 0.08),
     0px 0px 8px 0px rgba(0, 0, 0, 0.08);
+
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-fade-in-up: fade-in-up 0.25s ease-out;
 
   --font-sans:
     'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
@@ -79,5 +100,25 @@
     color: var(--color-neutral-0);
     background: #fff;
     letter-spacing: -0.01em;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: '렛츠커리어 참여자 전용 톡방',
 };
 
-export const viewport: Viewport = { themeColor: '#4138a3' };
+export const viewport: Viewport = { themeColor: '#ffffff' };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
