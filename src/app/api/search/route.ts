@@ -10,7 +10,7 @@ export const GET = route(async (req: Request) => {
   const escaped = q.replace(/[\\%_]/g, (c) => `\\${c}`);
   return all(
     `SELECT m.id, m.channel_id, m.parent_id, m.body, m.created_at,
-            u.display_name, c.name AS channel_name, c.type AS channel_type
+            u.display_name, m.user_id, c.name AS channel_name, c.type AS channel_type
      FROM messages m
      JOIN users u ON u.id = m.user_id
      JOIN channels c ON c.id = m.channel_id

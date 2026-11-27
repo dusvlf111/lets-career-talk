@@ -31,7 +31,7 @@ export default function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
 
   // 세션 쿠키가 생긴 뒤 전체 새로고침으로 이동해 미들웨어/캐시 상태를 깨끗하게 한다
   useEffect(() => {
-    if (state?.ok) window.location.replace('/c/general');
+    if (state?.ok) window.location.replace('/c');
   }, [state]);
 
   return (
@@ -58,7 +58,7 @@ export default function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
                 placeholder={f.placeholder}
                 required
                 autoComplete={f.type === 'password' ? (isSignup ? 'new-password' : 'current-password') : 'username'}
-                className="w-full rounded-md bg-neutral-95 p-3 text-xsmall14 text-neutral-0 outline-none ring-primary placeholder:text-neutral-50 focus:ring-1"
+                className="w-full rounded-md bg-neutral-95 p-3 text-xsmall16 text-neutral-0 md:text-xsmall14 outline-none ring-primary placeholder:text-neutral-50 focus:ring-1"
               />
             </label>
           ))}

@@ -1,17 +1,21 @@
 'use client';
 
-import { MessageSquareText, Pencil, SmilePlus, Trash2 } from 'lucide-react';
+import { Copy, MessageSquareText, Pencil, SmilePlus, Trash2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { api, keys, type Member, type Message } from './api';
 import Attachments from './Attachments';
 import { applyReaction, updateMessageEverywhere } from './cache';
 import { Avatar, formatTime, MessageBody } from './format';
 import { toDisplayText, toStoredText } from './mentions';
+import BottomSheet, { SheetAction } from './ui/BottomSheet';
 import Button from './ui/Button';
 import { confirm } from './ui/confirm';
 import { toast } from './ui/toast';
+
+const LONG_PRESS_MS = 450;
+const LONG_PRESS_MOVE_TOLERANCE_PX = 10;
 
 export const QUICK_EMOJIS = ['👍', '❤️', '😂', '🎉', '🙏', '👀', '✅', '🔥'];
 
@@ -34,6 +38,13 @@ export default function MessageItem({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [picker, setPicker] = useState(false);
+  const [sheet, setSheet] = useState(false);
+  // 모바일: 메시지를 길게 누르면 하단 시트 (터치 기기에는 hover 툴바가 없으므로)
+  const press = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number } | null>(null);
+  const cancelPress = () => {
+    if (press.current) clearTimeout(press.current.timer);
+    press.current = null;
+  };
   const isMine = m.user_id === meId;
   const deleted = Boolean(m.deleted_at);
   const pending = m.id.startsWith('temp-');
@@ -73,10 +84,44 @@ export default function MessageItem({
     refresh();
   };
 
+  const canAct = !deleted && !editing && !pending;
+  const startEdit = () => {
+    setDraft(toDisplayText(m.body, users));
+    setEditing(true);
+  };
+  const sheetDo = (fn: () => void) => () => {
+    setSheet(false);
+    fn();
+  };
+
   return (
-    <div className={`group relative flex gap-3 px-5 hover:bg-neutral-100 ${compact ? 'py-0.5' : 'pt-3 pb-1'} ${
-        pending ? 'opacity-50' : ''
-      }`}>
+    <div
+      onPointerDown={(e) => {
+        if (e.pointerType !== 'touch' || !canAct) return;
+        const { clientX: x, clientY: y } = e;
+        press.current = {
+          x,
+          y,
+          timer: setTimeout(() => {
+            press.current = null;
+            navigator.vibrate?.(10);
+            setSheet(true);
+          }, LONG_PRESS_MS),
+        };
+      }}
+      onPointerMove={(e) => {
+        const p = press.current;
+        if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) > LONG_PRESS_MOVE_TOLERANCE_PX) cancelPress();
+      }}
+      onPointerUp={cancelPress}
+      onPointerCancel={cancelPress}
+      onContextMenu={(e) => {
+        if (canAct && window.matchMedia('(pointer: coarse)').matches) e.preventDefault();
+      }}
+      className={`group relative flex gap-3 px-4 select-none [-webkit-touch-callout:none] hover:bg-neutral-100 md:px-5 md:select-text ${
+        compact ? 'py-0.5' : 'pt-3 pb-1'
+      } ${pending ? 'opacity-50' : ''} ${sheet ? 'bg-neutral-95' : ''}`}
+    >
       <div className="w-9 shrink-0">
         {compact ? (
           <span className="invisible block pt-0.5 text-right text-xxsmall12 text-neutral-50 group-hover:visible">
@@ -158,10 +203,42 @@ export default function MessageItem({
         <div className="absolute -top-4 right-5 hidden items-center rounded-sm border border-neutral-80 bg-white p-0.5 shadow-03 group-hover:flex">
           <ToolButton label="리액션" onClick={() => setPicker((v) => !v)}><SmilePlus className="size-4" /></ToolButton>
           {onOpenThread && <ToolButton label="스레드에 답글" onClick={onOpenThread}><MessageSquareText className="size-4" /></ToolButton>}
-          {isMine && <ToolButton label="수정" onClick={() => { setDraft(toDisplayText(m.body, users)); setEditing(true); }}><Pencil className="size-4" /></ToolButton>}
+          {isMine && <ToolButton label="수정" onClick={startEdit}><Pencil className="size-4" /></ToolButton>}
           {(isMine || isAdmin) && <ToolButton label="삭제" onClick={remove}><Trash2 className="size-4" /></ToolButton>}
         </div>
       )}
+      <BottomSheet open={sheet} onOpenChange={setSheet} title="메시지 메뉴">
+        <div className="flex justify-between px-4 pt-2 pb-3">
+          {QUICK_EMOJIS.slice(0, 6).map((e) => (
+            <button
+              key={e}
+              onClick={sheetDo(() => react(e))}
+              className="flex size-12 items-center justify-center rounded-full bg-neutral-95 text-2xl active:bg-neutral-85"
+            >
+              {e}
+            </button>
+          ))}
+        </div>
+        <div className="border-t border-neutral-85 pt-1">
+          {onOpenThread && (
+            <SheetAction icon={<MessageSquareText className="size-5" />} label="스레드에 답글" onClick={sheetDo(onOpenThread)} />
+          )}
+          <SheetAction
+            icon={<Copy className="size-5" />}
+            label="텍스트 복사"
+            onClick={sheetDo(() => {
+              navigator.clipboard
+                ?.writeText(toDisplayText(m.body, users))
+                .then(() => toast.success('복사했어요'))
+                .catch(() => toast.error('복사하지 못했어요'));
+            })}
+          />
+          {isMine && <SheetAction icon={<Pencil className="size-5" />} label="메시지 수정" onClick={sheetDo(startEdit)} />}
+          {(isMine || isAdmin) && (
+            <SheetAction icon={<Trash2 className="size-5" />} label="메시지 삭제" onClick={sheetDo(remove)} danger />
+          )}
+        </div>
+      </BottomSheet>
       {picker && (
         <div className="absolute top-6 right-5 z-10 flex gap-0.5 rounded-sm border border-neutral-80 bg-white p-1 shadow-04">
           {QUICK_EMOJIS.map((e) => (

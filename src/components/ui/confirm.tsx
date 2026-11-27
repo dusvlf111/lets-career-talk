@@ -54,12 +54,12 @@ export function ConfirmHost() {
     <AlertDialog.Root open={Boolean(pending)} onOpenChange={(open) => !open && close(false)}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="fixed inset-0 z-[60] bg-black/50 data-[state=open]:animate-fade-in" />
-        <AlertDialog.Content className="fixed top-1/2 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-04 focus:outline-none data-[state=open]:animate-fade-in">
+        <AlertDialog.Content className="fixed inset-x-0 bottom-0 z-[60] rounded-t-xl bg-white p-6 pb-[max(env(safe-area-inset-bottom),24px)] shadow-05 focus:outline-none data-[state=open]:animate-fade-in-up md:inset-x-auto md:top-1/2 md:bottom-auto md:left-1/2 md:w-[calc(100%-2rem)] md:max-w-md md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-lg md:pb-6 md:shadow-04 md:data-[state=open]:animate-fade-in">
           <AlertDialog.Title className="text-small18 font-semibold text-neutral-0">{data?.title}</AlertDialog.Title>
           <AlertDialog.Description className="mt-2 text-xsmall14 text-neutral-30">
             {data?.description}
           </AlertDialog.Description>
-          <div className="mt-6 flex justify-end gap-2">
+          <div className="mt-6 grid grid-cols-2 gap-2 md:flex md:justify-end">
             <AlertDialog.Cancel asChild>
               <Button variant="outlined">{data?.cancelLabel ?? '취소'}</Button>
             </AlertDialog.Cancel>

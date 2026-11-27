@@ -1,6 +1,6 @@
 'use client';
 
-import { X } from 'lucide-react';
+import { ChevronLeft, X } from 'lucide-react';
 import { useBootstrap, useThread } from './api';
 import Composer from './Composer';
 import MessageList from './MessageList';
@@ -21,9 +21,16 @@ export default function ThreadPanel({
 
   return (
     <aside className="flex w-full min-w-0 flex-col border-l border-neutral-80 lg:w-[400px] lg:shrink-0">
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-80 px-4">
-        <h2 className="text-xsmall16 font-bold text-neutral-0">스레드</h2>
-        <button onClick={onClose} className="flex size-9 items-center justify-center rounded-xs text-neutral-40 hover:bg-neutral-95 hover:text-neutral-0" aria-label="닫기">
+      <header className="box-content flex h-14 shrink-0 items-center justify-between gap-1 border-b border-neutral-80 px-3 pt-[env(safe-area-inset-top)] md:h-16 md:px-4">
+        <button
+          onClick={onClose}
+          aria-label="뒤로"
+          className="-ml-2 flex size-10 items-center justify-center rounded-xs text-neutral-20 hover:bg-neutral-95 md:hidden"
+        >
+          <ChevronLeft className="size-6" />
+        </button>
+        <h2 className="flex-1 text-xsmall16 font-bold text-neutral-0">스레드</h2>
+        <button onClick={onClose} className="hidden size-9 items-center justify-center rounded-xs text-neutral-40 hover:bg-neutral-95 hover:text-neutral-0 md:flex" aria-label="닫기">
           <X className="size-5" />
         </button>
       </header>

@@ -53,6 +53,7 @@ export type SearchResult = {
   display_name: string;
   channel_name: string | null;
   channel_type: 'public' | 'dm';
+  user_id?: string;
 };
 
 /** 실시간이 꺼져 있을 때의 폴링 간격 */

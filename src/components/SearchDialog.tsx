@@ -39,9 +39,9 @@ export default function SearchDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex animate-fade-in items-start justify-center bg-black/50 p-4 pt-[12vh]" onClick={onClose}>
-      <div className="w-full max-w-xl overflow-hidden rounded-lg bg-white shadow-04" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-2 border-b border-neutral-80 px-4">
+    <div className="fixed inset-0 z-50 flex animate-fade-in items-start justify-center bg-white md:bg-black/50 md:p-4 md:pt-[12vh]" onClick={onClose}>
+      <div className="flex h-full w-full flex-col overflow-hidden bg-white md:h-auto md:max-w-xl md:rounded-lg md:shadow-04" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 border-b border-neutral-80 px-4 pt-[env(safe-area-inset-top)]">
           <Search className="size-5 text-neutral-45" />
           <input
             autoFocus
@@ -49,11 +49,14 @@ export default function SearchDialog({ onClose }: { onClose: () => void }) {
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === 'Escape' && onClose()}
             placeholder="메시지 검색 (2글자 이상)"
-            className="h-14 flex-1 text-xsmall16 outline-none placeholder:text-neutral-50"
+            className="h-14 min-w-0 flex-1 text-[16px] outline-none placeholder:text-neutral-50"
           />
-          <kbd className="rounded-xxs border border-neutral-80 px-1.5 text-xxsmall12 text-neutral-45">ESC</kbd>
+          <kbd className="hidden rounded-xxs border border-neutral-80 px-1.5 text-xxsmall12 text-neutral-45 md:block">ESC</kbd>
+          <button onClick={onClose} className="text-xsmall16 text-primary md:hidden">
+            취소
+          </button>
         </div>
-        <ul className="max-h-[60vh] overflow-y-auto py-1">
+        <ul className="flex-1 overflow-y-auto py-1 md:max-h-[60vh] md:flex-none">
           {isFetching && <li className="px-4 py-3 text-xsmall14 text-neutral-40">검색 중…</li>}
           {data?.length === 0 && <li className="px-4 py-6 text-center text-xsmall14 text-neutral-40">결과가 없어요.</li>}
           {data?.map((r) => (

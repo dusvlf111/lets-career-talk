@@ -27,7 +27,7 @@ export default function Modal({
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-fade-in" />
         <Dialog.Content
           aria-describedby={description ? undefined : undefined}
-          className={`fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-lg bg-white p-6 shadow-04 focus:outline-none data-[state=open]:animate-fade-in ${
+          className={`fixed inset-x-0 bottom-0 z-50 max-h-[90dvh] overflow-y-auto rounded-t-xl bg-white p-6 pb-[max(env(safe-area-inset-bottom),24px)] shadow-05 focus:outline-none data-[state=open]:animate-fade-in-up md:inset-x-auto md:top-1/2 md:bottom-auto md:left-1/2 md:w-[calc(100%-2rem)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-lg md:pb-6 md:shadow-04 md:data-[state=open]:animate-fade-in ${
             size === 'lg' ? 'max-w-xl' : 'max-w-md'
           }`}
         >

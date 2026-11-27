@@ -1,6 +1,7 @@
 'use client';
 
-import { Hash, LogOut, Menu, Pencil, Trash2 } from 'lucide-react';
+import { ChevronLeft, Hash, LogOut, Pencil, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -10,6 +11,7 @@ import Composer from './Composer';
 import MessageList from './MessageList';
 import ThreadPanel from './ThreadPanel';
 import TypingIndicator from './TypingIndicator';
+import { Avatar } from './format';
 import EditTopicModal from './modal/EditTopicModal';
 import { useRealtime } from './Realtime';
 import { confirm } from './ui/confirm';
@@ -23,7 +25,7 @@ export default function ChannelView({ channelId }: { channelId: string }) {
   const { connected } = useRealtime();
   // 실시간 연결이 끊겨 있으면 폴링으로 대체
   const { data: messages, error } = useMessages(channelId, boot && boot.realtime && connected);
-  const { threadId, openThread, setSidebarOpen } = useUi();
+  const { threadId, openThread } = useUi();
   const qc = useQueryClient();
   const router = useRouter();
   const channel = boot?.channels.find((c) => c.id === channelId);
@@ -55,7 +57,7 @@ export default function ChannelView({ channelId }: { channelId: string }) {
     try {
       await api(`/api/channels/${channelId}/leave`, { method: 'POST' });
       await qc.invalidateQueries({ queryKey: keys.bootstrap });
-      router.push('/c/general');
+      router.push('/c');
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -72,7 +74,7 @@ export default function ChannelView({ channelId }: { channelId: string }) {
     try {
       await api(`/api/channels/${channelId}`, { method: 'DELETE' });
       await qc.invalidateQueries({ queryKey: keys.bootstrap });
-      router.push('/c/general');
+      router.push('/c');
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -81,14 +83,14 @@ export default function ChannelView({ channelId }: { channelId: string }) {
   return (
     <>
       <section className={`min-w-0 flex-1 flex-col ${threadId ? 'hidden lg:flex' : 'flex'}`}>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-neutral-80 px-4 md:px-5">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="-ml-1 flex size-9 items-center justify-center rounded-xs text-neutral-30 hover:bg-neutral-95 md:hidden"
-            aria-label="메뉴"
+        <header className="flex h-14 shrink-0 items-center gap-1 border-b border-neutral-80 px-3 pt-[env(safe-area-inset-top)] box-content md:h-16 md:gap-2 md:px-5">
+          <Link
+            href="/c"
+            className="-ml-2 flex size-10 items-center justify-center rounded-xs text-neutral-20 hover:bg-neutral-95 md:hidden"
+            aria-label="뒤로"
           >
-            <Menu className="size-5" />
-          </button>
+            <ChevronLeft className="size-6" />
+          </Link>
           <div className="min-w-0 flex-1">
             <h2 className="flex items-center gap-1 truncate text-xsmall16 font-bold text-neutral-0">
               {isPublic && <Hash className="size-4 shrink-0 text-neutral-40" />}
@@ -134,9 +136,15 @@ export default function ChannelView({ channelId }: { channelId: string }) {
             onOpenThread={openThread}
             header={
               <div className="px-5 pt-10 pb-4">
-                <div className="mb-3 flex size-12 items-center justify-center rounded-md bg-primary-10 text-primary">
-                  <Hash className="size-6" />
-                </div>
+                {isPublic ? (
+                  <div className="mb-3 flex size-12 items-center justify-center rounded-md bg-primary-10 text-primary">
+                    <Hash className="size-6" />
+                  </div>
+                ) : (
+                  <div className="mb-3">
+                    <Avatar name={title} id={channel?.dm_user_id ?? channelId} size={56} />
+                  </div>
+                )}
                 <h3 className="text-medium22 font-bold text-neutral-0">{isPublic ? `#${title}` : `${title}님과의 대화`}</h3>
                 <p className="mt-1 text-xsmall14 text-neutral-40">
                   {isPublic ? channel?.topic || '대화를 시작해보세요.' : '두 사람만 볼 수 있는 대화예요.'}

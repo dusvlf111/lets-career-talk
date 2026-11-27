@@ -135,7 +135,7 @@ export default function Composer({
 
   return (
     <div
-      className="relative px-5 pb-4"
+      className="relative px-3 pb-[max(env(safe-area-inset-bottom),12px)] md:px-5 md:pb-4"
       onDragOver={(e) => {
         if (!e.dataTransfer.types.includes('Files')) return;
         e.preventDefault();
@@ -267,7 +267,7 @@ export default function Composer({
               send();
             }
           }}
-          className="block w-full resize-none rounded-t-md bg-transparent px-3.5 pt-3 text-[15px] outline-none placeholder:text-neutral-50"
+          className="block w-full resize-none rounded-t-md bg-transparent px-3.5 pt-3 text-[16px] outline-none placeholder:text-neutral-50 md:text-[15px]"
         />
         <div className="flex items-center justify-between gap-2 px-2 pb-2 text-xxsmall12 text-neutral-50">
           <button

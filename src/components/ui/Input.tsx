@@ -2,7 +2,7 @@ import { forwardRef, type InputHTMLAttributes, type TextareaHTMLAttributes } fro
 
 /** 렛커 Input v2 스타일 (apps/web/src/common/input/v2) */
 const FIELD =
-  'w-full min-w-0 rounded-md bg-neutral-95 p-3 text-xsmall14 text-neutral-0 outline-none ring-primary placeholder:text-neutral-50 focus:ring-1';
+  'w-full min-w-0 rounded-md bg-neutral-95 p-3 text-xsmall16 text-neutral-0 md:text-xsmall14 outline-none ring-primary placeholder:text-neutral-50 focus:ring-1';
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className = '', ...rest }, ref) {
