@@ -39,7 +39,7 @@ export default function ThreadPanel({
           messages={data.replies}
           header={
             <div className="border-b border-neutral-80 pb-3">
-              <MessageList messages={[data.parent]} />
+              <MessageList messages={[data.parent]} dividers={false} />
               {data.replies.length > 0 && (
                 <p className="px-5 pt-2 text-xxsmall12 font-semibold text-neutral-40">답글 {data.replies.length}개</p>
               )}

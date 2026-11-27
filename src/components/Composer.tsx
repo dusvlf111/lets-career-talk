@@ -85,7 +85,8 @@ export default function Composer({
     const attachments = files.attachments;
     // 보내는 즉시 화면에 표시하고 (전송 중 표시), 서버 응답이 오면 진짜 메시지로 교체
     const temp: Message = {
-      id: `temp-${crypto.randomUUID()}`,
+      id: crypto.randomUUID(),
+      pending: true,
       channel_id: channelId,
       user_id: data.me.id,
       parent_id: parentId,
@@ -113,9 +114,9 @@ export default function Composer({
     try {
       const created = await api<Message>(`/api/channels/${channelId}/messages`, {
         method: 'POST',
-        body: { body, parentId, attachments },
+        body: { id: temp.id, body, parentId, attachments },
       });
-      upsertMessage(qc, created, temp.id);
+      upsertMessage(qc, created);
     } catch (e) {
       removeMessage(qc, temp);
       setText((current) => current || toDisplayText(body, data.users));

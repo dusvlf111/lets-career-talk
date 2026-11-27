@@ -192,6 +192,7 @@ export async function createMessage(
   body: string,
   parentId: string | null,
   attachments: AttachmentInput[] = [],
+  clientId?: string,
 ) {
   const text = body.trim();
   if (!text && attachments.length === 0) throw new HttpError(400, '메시지를 입력해주세요.');
@@ -216,7 +217,8 @@ export async function createMessage(
       throw new HttpError(400, '잘못된 스레드입니다.');
     }
   }
-  const id = newId();
+  // 클라이언트가 만든 id를 그대로 쓰면 낙관적 메시지와 실제 메시지가 같은 항목이 된다
+  const id = clientId ?? newId();
   const now = Date.now();
   const files: Attachment[] = attachments.map((a) => ({
     id: newId(),

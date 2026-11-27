@@ -21,6 +21,7 @@ const attachmentSchema = z.object({
 });
 
 const schema = z.object({
+  id: z.string().uuid().optional(),
   body: z.string().default(''),
   parentId: z.string().nullable().default(null),
   attachments: z.array(attachmentSchema).default([]),
@@ -31,6 +32,13 @@ export const POST = route(async (req: Request, { params }: Ctx) => {
   const parsed = schema.safeParse(json);
   if (!parsed.success) throw new HttpError(400, '잘못된 요청입니다.');
   const channel = await assertCanRead(user, id);
-  const { body, parentId, attachments } = parsed.data;
-  return createMessage(user, channel, body, parentId, attachments);
+  const { id: clientId, body, parentId, attachments } = parsed.data;
+  try {
+    return await createMessage(user, channel, body, parentId, attachments, clientId);
+  } catch (e) {
+    if (String(e).includes('UNIQUE') || String(e).includes('PRIMARY KEY')) {
+      throw new HttpError(409, '이미 전송된 메시지예요.');
+    }
+    throw e;
+  }
 });

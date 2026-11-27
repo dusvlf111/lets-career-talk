@@ -23,6 +23,7 @@ import { api, channelLabel, keys, useBootstrap, type SearchResult, type SidebarC
 import { Avatar, formatDay, formatTime } from './format';
 import { toDisplayText } from './mentions';
 import CreateChannelModal from './modal/CreateChannelModal';
+import { usePrefetchChannel } from './Prefetcher';
 import { useRealtime } from './Realtime';
 import SearchDialog from './SearchDialog';
 import { toast } from './ui/toast';
@@ -348,11 +349,14 @@ function PresenceAvatar({ name, id, on, size = 20 }: { name: string; id: string;
 }
 
 function ChannelLink({ c, active, icon }: { c: SidebarChannel; active: boolean; icon: React.ReactNode }) {
+  const prefetch = usePrefetchChannel();
   const unread = c.unread > 0 && !active;
   const badge = c.type === 'dm' ? c.unread : c.mention;
   return (
     <Link
       href={`/c/${c.id}`}
+      onMouseEnter={() => prefetch(c.id)}
+      onTouchStart={() => prefetch(c.id)}
       className={`${ROW} ${
         active
           ? 'md:bg-primary-10 md:font-semibold md:text-primary'

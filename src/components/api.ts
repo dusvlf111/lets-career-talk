@@ -43,6 +43,8 @@ export type Message = {
   last_reply_at: number | null;
   reactions: Reaction[];
   attachments: Attachment[];
+  /** 전송 중(낙관적 표시)인 내 메시지 */
+  pending?: boolean;
 };
 export type SearchResult = {
   id: string;
@@ -88,10 +90,18 @@ export function useBootstrap() {
   });
 }
 
+/** 실시간 연결 중에는 이벤트로 캐시가 갱신되므로 다시 받을 필요가 거의 없다 */
+const LIVE_STALE_MS = 5 * 60 * 1000;
+
+export const messagesQuery = (channelId: string) => ({
+  queryKey: keys.messages(channelId),
+  queryFn: () => api<Message[]>(`/api/channels/${channelId}/messages`),
+});
+
 export function useMessages(channelId: string, realtime: boolean | undefined) {
   return useQuery({
-    queryKey: keys.messages(channelId),
-    queryFn: () => api<Message[]>(`/api/channels/${channelId}/messages`),
+    ...messagesQuery(channelId),
+    staleTime: realtime ? LIVE_STALE_MS : 5_000,
     refetchInterval: realtime === false ? POLL_INTERVAL_MS : false,
   });
 }

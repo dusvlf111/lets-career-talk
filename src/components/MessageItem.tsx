@@ -47,7 +47,7 @@ export default function MessageItem({
   };
   const isMine = m.user_id === meId;
   const deleted = Boolean(m.deleted_at);
-  const pending = m.id.startsWith('temp-');
+  const pending = Boolean(m.pending);
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: keys.messages(m.channel_id) });
@@ -120,7 +120,7 @@ export default function MessageItem({
       }}
       className={`group relative flex gap-3 px-4 select-none [-webkit-touch-callout:none] hover:bg-neutral-100 md:px-5 md:select-text ${
         compact ? 'py-0.5' : 'pt-3 pb-1'
-      } ${pending ? 'opacity-50' : ''} ${sheet ? 'bg-neutral-95' : ''}`}
+      } ${sheet ? 'bg-neutral-95' : ''}`}
     >
       <div className="w-9 shrink-0">
         {compact ? (

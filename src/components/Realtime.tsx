@@ -73,7 +73,17 @@ export default function RealtimeProvider({
     import('@ably/pubsub-device').then(({ createClient }) => {
       if (closed) return;
       rt = createClient({ authUrl: '/api/ably/token', clientId: meId });
-      rt.connection.on((s) => setConnected(s.current === 'connected'));
+      let wasConnected = false;
+      rt.connection.on((s) => {
+        const isConnected = s.current === 'connected';
+        // 끊겼다가 다시 연결되면 그사이 놓친 이벤트가 있을 수 있으니 목록을 다시 받는다
+        if (isConnected && wasConnected) {
+          qc.invalidateQueries({ queryKey: ['messages'] });
+          qc.invalidateQueries({ queryKey: keys.bootstrap });
+        }
+        if (isConnected) wasConnected = true;
+        setConnected(isConnected);
+      });
       setClient(rt);
     });
     return () => {

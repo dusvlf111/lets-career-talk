@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { createContext, useContext, useState } from 'react';
 
 import { useBootstrap } from './api';
+import Prefetcher from './Prefetcher';
 import RealtimeProvider from './Realtime';
 import Sidebar from './Sidebar';
 
@@ -48,6 +49,7 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={{ threadId, openThread, sidebarOpen, setSidebarOpen }}>
       <RealtimeProvider bootstrap={data}>
+        <Prefetcher channels={data.channels} />
         <div className="flex h-dvh overflow-hidden bg-white">
           <div className={`${isHome ? 'flex' : 'hidden'} min-w-0 flex-1 md:flex md:flex-none`}>
             <Sidebar />

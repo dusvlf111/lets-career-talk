@@ -13,8 +13,11 @@ export default function MessageList({
   messages,
   onOpenThread,
   header,
+  dividers = true,
 }: {
   messages: Message[];
+  /** 날짜 구분선 표시 (스레드 원글 영역에서는 끈다) */
+  dividers?: boolean;
   onOpenThread?: (id: string) => void;
   header?: React.ReactNode;
 }) {
@@ -51,7 +54,7 @@ export default function MessageList({
           m.created_at - prev.created_at < GROUP_WINDOW_MS;
         return (
           <Fragment key={m.id}>
-            {newDay && (
+            {newDay && dividers && (
               <div className="relative my-3 flex justify-center">
                 <div className="absolute inset-x-0 top-1/2 border-t border-neutral-80" />
                 <span className="relative rounded-full border border-neutral-80 bg-white px-3 py-1 text-xxsmall12 font-semibold text-neutral-30">
