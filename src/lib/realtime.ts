@@ -3,6 +3,10 @@ import 'server-only';
 import { createHttpClient, type PubSubHttpClient } from '@ably/pubsub-server';
 
 import { all } from './db';
+import { memo } from './memo';
+
+const DM_MEMBERS_TTL_MS = 10 * 60 * 1000;
+const dmMembers = memo<string[]>(DM_MEMBERS_TTL_MS);
 
 let rest: PubSubHttpClient | null = null;
 
@@ -53,15 +57,15 @@ export async function publish(
       await client.channels.get(`pub:${target.channelId}`).publish('event', event);
       return;
     }
-    const members = await all<{ user_id: string }>(
-      'SELECT user_id FROM channel_members WHERE channel_id = ?',
-      [target.channelId!],
+    // DM 멤버는 고정이라 캐시
+    const members = await dmMembers.get(target.channelId!, async () =>
+      (
+        await all<{ user_id: string }>('SELECT user_id FROM channel_members WHERE channel_id = ?', [
+          target.channelId!,
+        ])
+      ).map((m) => m.user_id),
     );
-    await Promise.all(
-      members.map((m) =>
-        client.channels.get(`user:${m.user_id}`).publish('event', event),
-      ),
-    );
+    await Promise.all(members.map((uid) => client.channels.get(`user:${uid}`).publish('event', event)));
   } catch (e) {
     console.error('Ably publish 실패', e);
   }

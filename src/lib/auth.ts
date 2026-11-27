@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 import { one } from './db';
+import { memo } from './memo';
 import { SESSION_COOKIE, verifySession } from './session';
 
 export type User = {
@@ -13,13 +14,15 @@ export type User = {
   is_admin: number;
 };
 
+const USER_CACHE_TTL_MS = 5 * 60 * 1000;
+const userCache = memo<User | null>(USER_CACHE_TTL_MS);
+
 export async function currentUser() {
   const store = await cookies();
   const session = await verifySession(store.get(SESSION_COOKIE)?.value);
   if (!session) return null;
-  return one<User>(
-    'SELECT id, username, display_name, is_admin FROM users WHERE id = ?',
-    [session.uid],
+  return userCache.get(session.uid, () =>
+    one<User>('SELECT id, username, display_name, is_admin FROM users WHERE id = ?', [session.uid]),
   );
 }
 

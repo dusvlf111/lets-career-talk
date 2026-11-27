@@ -12,9 +12,11 @@ async function ownedMessage(user: User, id: string) {
     [id],
   );
   if (!msg || msg.deleted_at) throw new HttpError(404, '메시지를 찾을 수 없어요.');
-  const canManage = msg.user_id === user.id || Number(user.is_admin) === 1;
-  if (!canManage) throw new HttpError(403, '내 메시지만 수정/삭제할 수 있어요.');
   const channel = await getChannel(msg.channel_id);
+  // 관리자도 DM에는 손댈 수 없다 (공개 채널의 메시지만 관리)
+  const canManage =
+    msg.user_id === user.id || (Number(user.is_admin) === 1 && channel?.type === 'public');
+  if (!canManage) throw new HttpError(403, '내 메시지만 수정/삭제할 수 있어요.');
   return { msg, channel: channel! };
 }
 

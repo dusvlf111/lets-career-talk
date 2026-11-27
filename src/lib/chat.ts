@@ -4,6 +4,7 @@ import { after } from 'next/server';
 
 import { HttpError, type User } from './auth';
 import { all, db, one, run } from './db';
+import { memo } from './memo';
 import { publish } from './realtime';
 
 export const MESSAGE_PAGE_SIZE = 50;
@@ -61,10 +62,20 @@ export function newId() {
   return crypto.randomUUID();
 }
 
+const CHANNEL_CACHE_TTL_MS = 30 * 1000;
+const DM_MEMBER_CACHE_TTL_MS = 10 * 60 * 1000;
+const channelCache = memo<Channel | null>(CHANNEL_CACHE_TTL_MS);
+const dmMemberCache = memo<boolean | null>(DM_MEMBER_CACHE_TTL_MS);
+
 export async function getChannel(channelId: string) {
-  return one<Channel>('SELECT id, name, type, topic FROM channels WHERE id = ?', [
-    channelId,
-  ]);
+  return channelCache.get(channelId, () =>
+    one<Channel>('SELECT id, name, type, topic FROM channels WHERE id = ?', [channelId]),
+  );
+}
+
+/** 채널 정보가 바뀌거나 삭제되면 이 인스턴스의 캐시를 비운다 */
+export function forgetChannel(channelId: string) {
+  channelCache.delete(channelId);
 }
 
 /** 읽기 권한: 공개 채널은 누구나, DM은 멤버만 */
@@ -72,9 +83,11 @@ export async function assertCanRead(user: User, channelId: string) {
   const channel = await getChannel(channelId);
   if (!channel) throw new HttpError(404, '채널을 찾을 수 없습니다.');
   if (channel.type === 'dm') {
-    const member = await one(
-      'SELECT 1 FROM channel_members WHERE channel_id = ? AND user_id = ?',
-      [channelId, user.id],
+    // DM 멤버는 바뀌지 않으므로 '멤버임'만 캐시한다
+    const member = await dmMemberCache.get(`${channelId}:${user.id}`, async () =>
+      (await one('SELECT 1 FROM channel_members WHERE channel_id = ? AND user_id = ?', [channelId, user.id]))
+        ? true
+        : null,
     );
     if (!member) throw new HttpError(403, '접근 권한이 없습니다.');
   }
@@ -212,8 +225,26 @@ export async function createMessage(
     content_type: a.content_type.slice(0, 100),
     size: a.size,
   }));
-  // 쓰기는 한 번의 왕복(batch)으로 처리
-  await (await db()).batch(
+  // 쓸 값으로 바로 메시지를 만든다 (다시 조회하지 않음)
+  const message: Message = {
+    id,
+    channel_id: channel.id,
+    user_id: user.id,
+    parent_id: parentId,
+    body: text,
+    created_at: now,
+    edited_at: null,
+    deleted_at: null,
+    display_name: user.display_name,
+    reply_count: 0,
+    last_reply_at: null,
+    reactions: [],
+    attachments: files,
+  };
+  // DB 쓰기(한 번의 batch)와 실시간 발행을 동시에 → 받는 사람은 DB 저장을 기다리지 않는다
+  await Promise.all([
+    db().then((client) =>
+      client.batch(
     [
       {
         sql: `INSERT INTO messages (id, channel_id, user_id, parent_id, body, created_at)
@@ -234,29 +265,10 @@ export async function createMessage(
       },
     ],
     'write',
-  );
-  // 방금 쓴 값으로 바로 메시지를 만든다 (다시 조회하지 않음)
-  const message: Message = {
-    id,
-    channel_id: channel.id,
-    user_id: user.id,
-    parent_id: parentId,
-    body: text,
-    created_at: now,
-    edited_at: null,
-    deleted_at: null,
-    display_name: user.display_name,
-    reply_count: 0,
-    last_reply_at: null,
-    reactions: [],
-    attachments: files,
-  };
-  after(() =>
-    publish(
-      { type: 'message.created', channelId: channel.id, message },
-      { kind: channel.type, channelId: channel.id },
+      ),
     ),
-  );
+    publish({ type: 'message.created', channelId: channel.id, message }, { kind: channel.type, channelId: channel.id }),
+  ]);
   return message;
 }
 

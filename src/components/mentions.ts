@@ -34,3 +34,20 @@ export function toStoredText(text: string, users: Member[], picked: Map<string, 
   const re = new RegExp(`@(${names.map(escapeRegExp).join('|')})(?=$|[\\s.,!?)\\]])`, 'g');
   return text.replace(re, (_, name: string) => `<@${candidates.get(name)}>`);
 }
+
+// 한글 호환 자모(ㄱ~ㅎ) → 초성 결합 자모. "@ㅂ"이나 조합 중인 "@바"로도 "밥"을 찾기 위함
+const COMPAT_TO_CHOSEONG: Record<string, string> = {
+  ㄱ: '\u1100', ㄲ: '\u1101', ㄴ: '\u1102', ㄷ: '\u1103', ㄸ: '\u1104', ㄹ: '\u1105', ㅁ: '\u1106',
+  ㅂ: '\u1107', ㅃ: '\u1108', ㅅ: '\u1109', ㅆ: '\u110A', ㅇ: '\u110B', ㅈ: '\u110C', ㅉ: '\u110D',
+  ㅊ: '\u110E', ㅋ: '\u110F', ㅌ: '\u1110', ㅍ: '\u1111', ㅎ: '\u1112',
+};
+
+function normalize(s: string) {
+  return [...s.toLowerCase()].map((c) => COMPAT_TO_CHOSEONG[c] ?? c).join('').normalize('NFD');
+}
+
+/** 이름에 검색어가 포함되는지 (한글 부분 입력 포함) */
+export function matchesName(name: string, query: string) {
+  if (!query) return true;
+  return normalize(name).includes(normalize(query));
+}

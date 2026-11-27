@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { HttpError, requireUser, route } from '@/lib/auth';
-import { assertCanRead } from '@/lib/chat';
+import { assertCanRead, forgetChannel } from '@/lib/chat';
 import { run } from '@/lib/db';
 import { publish } from '@/lib/realtime';
 
@@ -17,6 +17,7 @@ export const PATCH = route(async (req: Request, { params }: Ctx) => {
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) throw new HttpError(400, '주제는 200자까지 가능해요.');
   await run('UPDATE channels SET topic = ? WHERE id = ?', [parsed.data.topic, id]);
+  forgetChannel(id);
   await publish({ type: 'channels' }, { kind: 'global' });
 });
 
@@ -33,5 +34,6 @@ export const DELETE = route(async (_req: Request, { params }: Ctx) => {
   await run('DELETE FROM messages WHERE channel_id = ?', [id]);
   await run('DELETE FROM channel_members WHERE channel_id = ?', [id]);
   await run('DELETE FROM channels WHERE id = ?', [id]);
+  forgetChannel(id);
   await publish({ type: 'channels' }, { kind: 'global' });
 });

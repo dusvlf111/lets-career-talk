@@ -2,11 +2,12 @@
 
 import { FileText, Paperclip, X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import { api, keys, useBootstrap, type Member, type Message } from './api';
 import { removeMessage, upsertMessage } from './cache';
-import { toDisplayText, toStoredText } from './mentions';
+import { Avatar } from './format';
+import { matchesName, toDisplayText, toStoredText } from './mentions';
 import { useRealtime } from './Realtime';
 import { toast } from './ui/toast';
 import { formatBytes, useUploads } from './useUploads';
@@ -36,30 +37,46 @@ export default function Composer({
   const canSend = (text.trim().length > 0 || files.attachments.length > 0) && !files.busy;
 
   const mentionQuery = /(?:^|\s)@([^\s@]*)$/.exec(text.slice(0, cursor))?.[1];
+  const [dismissedQuery, setDismissedQuery] = useState<string | null>(null);
+  const [active, setActive] = useState(0);
   const suggestions =
-    mentionQuery === undefined
+    mentionQuery === undefined || mentionQuery === dismissedQuery
       ? []
       : (data?.users ?? [])
-          .filter(
-            (u) =>
-              u.id !== data?.me.id && u.display_name.toLowerCase().includes(mentionQuery.toLowerCase()),
-          )
+          .filter((u) => u.id !== data?.me.id && matchesName(u.display_name, mentionQuery))
           .slice(0, MENTION_SUGGEST_LIMIT);
+  const activeIndex = Math.min(active, Math.max(0, suggestions.length - 1));
+  // 한글 조합 중 Enter/Tab을 누르면 조합이 끝난 뒤에 고른다
+  const pendingPick = useRef(false);
+  const latest = useRef({ suggestions, activeIndex });
+  latest.current = { suggestions, activeIndex };
 
   // 자동완성으로 고른 이름 → 사용자 id (동명이인 구분용)
   const picked = useRef(new Map<string, string>());
 
   const insertMention = (user: Member) => {
     picked.current.set(user.display_name, user.id);
-    const before = text.slice(0, cursor).replace(/@([^\s@]*)$/, `@${user.display_name} `);
-    const next = before + text.slice(cursor);
+    // state 대신 실제 입력창 값을 읽는다 (한글 조합 직후에도 최신 값)
+    const el = ref.current;
+    const value = el?.value ?? text;
+    const pos = el?.selectionStart ?? cursor;
+    const before = value.slice(0, pos).replace(/@([^\s@]*)$/, `@${user.display_name} `);
+    const next = before + value.slice(pos);
     setText(next);
     setCursor(before.length);
-    requestAnimationFrame(() => {
-      ref.current?.focus();
-      ref.current?.setSelectionRange(before.length, before.length);
-    });
+    setActive(0);
+    pendingCaret.current = before.length;
   };
+
+  // 값이 화면에 반영된 직후(그리기 전)에 커서를 옮긴다. 한 프레임 늦게 옮기면 그사이 입력한 글자 앞으로 커서가 튄다
+  const pendingCaret = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const pos = pendingCaret.current;
+    if (pos === null || !ref.current) return;
+    pendingCaret.current = null;
+    ref.current.focus();
+    ref.current.setSelectionRange(pos, pos);
+  });
 
   const send = async () => {
     if (!canSend || !data) return;
@@ -143,17 +160,25 @@ export default function Composer({
         }}
       />
       {suggestions.length > 0 && (
-        <ul className="absolute bottom-full left-5 mb-1 w-64 overflow-hidden rounded-sm border border-neutral-80 bg-white py-1 shadow-04">
-          {suggestions.map((u) => (
-            <li key={u.id}>
+        <ul
+          role="listbox"
+          className="absolute bottom-full left-5 mb-1 w-64 overflow-hidden rounded-sm border border-neutral-80 bg-white py-1 shadow-04"
+        >
+          {suggestions.map((u, i) => (
+            <li key={u.id} role="option" aria-selected={i === activeIndex}>
               <button
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  insertMention(u);
-                }}
-                className="flex w-full gap-2 px-3 py-2 text-left text-xsmall14 hover:bg-primary-10 hover:text-primary"
+                type="button"
+                // 입력창 포커스를 잃지 않게 막고, 클릭/탭은 onClick에서 처리
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => insertMention(u)}
+                onMouseEnter={() => setActive(i)}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xsmall14 ${
+                  i === activeIndex ? 'bg-primary-10 text-primary' : 'text-neutral-10'
+                }`}
               >
-                <span className="font-semibold">{u.display_name}</span>
+                <Avatar name={u.display_name} id={u.id} size={20} />
+                <span className="flex-1 truncate font-semibold">{u.display_name}</span>
+                {i === activeIndex && <span className="text-xxsmall12 text-neutral-45">Tab</span>}
               </button>
             </li>
           ))}
@@ -207,11 +232,39 @@ export default function Composer({
             e.preventDefault();
             files.add(pasted);
           }}
+          onCompositionEnd={() => {
+            if (!pendingPick.current) return;
+            pendingPick.current = false;
+            // 조합 완료 값이 반영된 다음 프레임에 고른다
+            requestAnimationFrame(() => {
+              const { suggestions: list, activeIndex: idx } = latest.current;
+              if (list[idx]) insertMention(list[idx]);
+            });
+          }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+            const composing = e.nativeEvent.isComposing || e.keyCode === 229;
+            if (suggestions.length > 0) {
+              if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                const step = e.key === 'ArrowDown' ? 1 : -1;
+                setActive((activeIndex + step + suggestions.length) % suggestions.length);
+                return;
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                setDismissedQuery(mentionQuery ?? null);
+                return;
+              }
+              if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+                e.preventDefault();
+                if (composing) pendingPick.current = true;
+                else insertMention(suggestions[activeIndex]);
+                return;
+              }
+            }
+            if (e.key === 'Enter' && !e.shiftKey && !composing) {
               e.preventDefault();
-              if (suggestions.length > 0) insertMention(suggestions[0]);
-              else send();
+              send();
             }
           }}
           className="block w-full resize-none rounded-t-md bg-transparent px-3.5 pt-3 text-[15px] outline-none placeholder:text-neutral-50"

@@ -27,9 +27,8 @@ const schema = z.object({
 });
 
 export const POST = route(async (req: Request, { params }: Ctx) => {
-  const user = await requireUser();
-  const { id } = await params;
-  const parsed = schema.safeParse(await req.json());
+  const [user, { id }, json] = await Promise.all([requireUser(), params, req.json()]);
+  const parsed = schema.safeParse(json);
   if (!parsed.success) throw new HttpError(400, '잘못된 요청입니다.');
   const channel = await assertCanRead(user, id);
   const { body, parentId, attachments } = parsed.data;
