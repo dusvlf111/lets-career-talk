@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 
 import { useBootstrap } from './api';
 import Prefetcher from './Prefetcher';
@@ -29,7 +29,19 @@ export default function Workspace({ children }: { children: React.ReactNode }) {
   const [threadId, openThread] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // 모바일: /c 는 홈(목록) 화면, /c/[id] 는 대화 화면을 각각 전체 화면으로 (슬랙 모바일 방식)
-  const isHome = usePathname() === '/c';
+  const pathname = usePathname();
+  const isHome = pathname === '/c';
+
+  // 브라우저 탭 제목에 알림 수 표시: (DM 안 읽음 + 멘션)
+  const alertCount = (data?.channels ?? []).reduce(
+    (sum, c) => sum + (c.type === 'dm' ? c.unread : c.mention),
+    0,
+  );
+  useEffect(() => {
+    const base = document.title.replace(/^\(\d+\+?\)\s*/, '');
+    document.title = alertCount > 0 ? `(${alertCount}) ${base}` : base;
+    // 페이지 이동 시 Next가 제목을 되돌리므로 경로가 바뀔 때도 다시 적용
+  }, [alertCount, pathname]);
 
   if (error) {
     return (

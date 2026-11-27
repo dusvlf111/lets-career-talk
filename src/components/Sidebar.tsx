@@ -26,12 +26,15 @@ import CreateChannelModal from './modal/CreateChannelModal';
 import { usePrefetchChannel } from './Prefetcher';
 import { useRealtime } from './Realtime';
 import SearchDialog from './SearchDialog';
+import Modal from './ui/Modal';
 import { toast } from './ui/toast';
 import { useUi } from './Workspace';
 
 const COHORT = process.env.NEXT_PUBLIC_COHORT_NAME ?? '렛츠커리어';
 
 type Tab = 'home' | 'dms' | 'activity' | 'me';
+
+const MAX_BADGE = 99;
 
 const TABS: { id: Tab; label: string; icon: typeof House }[] = [
   { id: 'home', label: '홈', icon: House },
@@ -54,6 +57,7 @@ export default function Sidebar() {
   const [browseOpen, setBrowseOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('home');
+  const [activityOpen, setActivityOpen] = useState(false);
   if (!data) return null;
 
   const joined = data.channels.filter((c) => c.type === 'public' && c.joined);
@@ -169,6 +173,19 @@ export default function Sidebar() {
             <Search className="size-4" />
             메시지 검색
           </button>
+          {/* 데스크톱: 활동(나를 멘션한 메시지) */}
+          <button
+            onClick={() => setActivityOpen(true)}
+            className="mx-2 mt-2 hidden w-[calc(100%-1rem)] items-center gap-2 rounded-xs px-2 py-1.5 text-xsmall14 text-neutral-30 hover:bg-neutral-90 md:flex"
+          >
+            <AtSign className="size-4 text-neutral-45" />
+            <span className={`flex-1 text-left ${mentionCount > 0 ? 'font-bold text-neutral-0' : ''}`}>활동</span>
+            {mentionCount > 0 && (
+              <span className="min-w-5 rounded-full bg-requirement px-1.5 text-center text-xxsmall12 font-bold text-white">
+                {mentionCount}
+              </span>
+            )}
+          </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto pt-3 pb-4 md:mt-1">
@@ -265,6 +282,19 @@ export default function Sidebar() {
       </aside>
       {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} />}
       <CreateChannelModal open={createOpen} onOpenChange={setCreateOpen} onCreated={go} />
+      <Modal open={activityOpen} onOpenChange={setActivityOpen} title="활동" description="나를 멘션한 메시지예요." size="lg">
+        <div className="-mx-6 max-h-[60vh] overflow-y-auto">
+          {activityOpen && (
+            <ActivityList
+              onOpen={(r) => {
+                setActivityOpen(false);
+                go(r.channel_id);
+                setTimeout(() => openThread(r.parent_id ?? r.id), 0);
+              }}
+            />
+          )}
+        </div>
+      </Modal>
     </>
   );
 }
@@ -351,7 +381,9 @@ function PresenceAvatar({ name, id, on, size = 20 }: { name: string; id: string;
 function ChannelLink({ c, active, icon }: { c: SidebarChannel; active: boolean; icon: React.ReactNode }) {
   const prefetch = usePrefetchChannel();
   const unread = c.unread > 0 && !active;
-  const badge = c.type === 'dm' ? c.unread : c.mention;
+  // 빨강: DM·멘션(나를 찾는 것), 회색: 그 외 안 읽은 메시지 수
+  const urgent = c.type === 'dm' ? c.unread : c.mention;
+  const badge = urgent > 0 ? urgent : c.unread;
   return (
     <Link
       href={`/c/${c.id}`}
@@ -368,8 +400,12 @@ function ChannelLink({ c, active, icon }: { c: SidebarChannel; active: boolean; 
       <span className={`shrink-0 ${active ? 'md:text-primary' : 'text-neutral-45'}`}>{icon}</span>
       <span className="flex-1 truncate">{channelLabel(c)}</span>
       {!active && badge > 0 && (
-        <span className="min-w-5 rounded-full bg-requirement px-1.5 text-center text-xxsmall12 font-bold text-white">
-          {badge}
+        <span
+          className={`min-w-5 rounded-full px-1.5 text-center text-xxsmall12 font-bold ${
+            urgent > 0 ? 'bg-requirement text-white' : 'bg-neutral-85 text-neutral-30'
+          }`}
+        >
+          {badge > MAX_BADGE ? `${MAX_BADGE}+` : badge}
         </span>
       )}
     </Link>
