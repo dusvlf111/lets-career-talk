@@ -1,5 +1,12 @@
 @import 'tailwindcss';
 
+/*
+ * Tailwind v4의 hover는 (hover: hover) 기기에서만 동작한다.
+ * 일부 데스크톱 브라우저/원격 브라우저/터치 노트북은 hover:none으로 응답해
+ * 메시지 메뉴가 아예 안 뜨므로 v3처럼 항상 :hover 로 동작하게 한다.
+ */
+@custom-variant hover (&:hover);
+
 /* 렛츠커리어 디자인 토큰 (lets-intern-client packages/config/tailwind/preset.js) */
 @theme {
   --color-neutral-*: initial;

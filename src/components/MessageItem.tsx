@@ -200,7 +200,7 @@ export default function MessageItem({
       </div>
 
       {!deleted && !editing && !pending && (
-        <div className="absolute -top-4 right-5 hidden items-center rounded-sm border border-neutral-80 bg-white p-0.5 shadow-03 group-hover:flex">
+        <div className="absolute -top-4 right-5 hidden items-center rounded-sm border border-neutral-80 bg-white p-0.5 shadow-03 md:group-hover:flex">
           <ToolButton label="리액션" onClick={() => setPicker((v) => !v)}><SmilePlus className="size-4" /></ToolButton>
           {onOpenThread && <ToolButton label="스레드에 답글" onClick={onOpenThread}><MessageSquareText className="size-4" /></ToolButton>}
           {isMine && <ToolButton label="수정" onClick={startEdit}><Pencil className="size-4" /></ToolButton>}
